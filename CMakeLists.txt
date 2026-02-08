@@ -33,25 +33,22 @@ project(Projet C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add executable. Default name is the project name, version 0.1
+# --- 1. LIB LoRa et Test ---
+add_subdirectory(common/LoRa)
+add_subdirectory(tests/LoRa)
 
-add_executable(Projet main.cpp )
 
+# --- 2. DÉFINITION DE L'EXÉCUTABLE  ---
+add_executable(Projet main.cpp)
+target_link_libraries(Projet PRIVATE lora_common pico_stdlib)
+
+# --- 3. OPTIONS PICO  ---
 pico_set_program_name(Projet "Projet")
 pico_set_program_version(Projet "0.1")
 
-# Modify the below lines to enable/disable output over UART/USB
+# Configuration de la console (USB activé, UART désactivé)
 pico_enable_stdio_uart(Projet 0)
 pico_enable_stdio_usb(Projet 1)
 
-# Add the standard library to the build
-target_link_libraries(Projet
-        pico_stdlib)
-
-# Add the standard include files to the build
-target_include_directories(Projet PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}
-)
-
+# Cette ligne est aussi cruciale pour générer le .uf2 final
 pico_add_extra_outputs(Projet)
-
