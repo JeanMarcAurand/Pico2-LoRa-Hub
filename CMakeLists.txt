@@ -36,6 +36,7 @@ pico_sdk_init()
 # --- 1. LIB LoRa et Test ---
 add_subdirectory(common/LoRa)
 add_subdirectory(tests/LoRa)
+add_subdirectory(tests/DialogLoRa)
 
 
 # --- 2. DÉFINITION DE L'EXÉCUTABLE  ---

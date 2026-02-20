@@ -27,7 +27,7 @@ LoRaClass LoRa;
 const uint LED_PIN = 25;
 
 // Fonction principale pour le mode émetteur
-void runSenderMode()
+void runForNodeMode()
 {
 
     // Configurer la puissance de transmission (17 dBm)
@@ -81,7 +81,7 @@ void runSenderMode()
 }
 
 // Fonction principale pour le mode rÃ©cepteur
-void runReceiverMode()
+void runForHubMode()
 {
     printf("Mode RECEPTEUR LoRa active\n");
 
@@ -188,10 +188,10 @@ int main()
     switch (LORA_MODE)
     {
     case LORA_SEND:
-        runSenderMode();
+        runForNodeMode();
         break;
     case LORA_RECEIVE:
-        runReceiverMode();
+        runForHubMode();
         break;
     default:
         printf("Mode non valide.\n");

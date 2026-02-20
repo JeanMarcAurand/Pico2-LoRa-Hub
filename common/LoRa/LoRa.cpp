@@ -30,7 +30,7 @@ LoRaClass::LoRaClass() : //_spiSettings(LORA_DEFAULT_SPI_FREQUENCY, MSBFIRST, SP
 
 	// Déclaration de l'interruption
 	gpio_set_irq_enabled_with_callback(LORA_DEFAULT_DO_INT_PIN,
-									   GPIO_IRQ_EDGE_FALL, // front descendant
+									   GPIO_IRQ_EDGE_RISE, // front descendant
 									   true,			   // activer
 									   &rxLoRa_callback	   // fonction appelée
 	);
@@ -276,8 +276,8 @@ int LoRaClass::sendPacketBlocking(const uint8_t *buffer, size_t size)
 		/* Transmission en cours.*/
 		return (-1);
 	}
-	printf("pas d emission en cours: %x\n", readRegister(REG_OP_MODE) & MODE_TX);
-	printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
+	//printf("pas d emission en cours: %x\n", readRegister(REG_OP_MODE) & MODE_TX);
+	//printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
 
 	// Vérifie la taille du message a envoyer.
 	if ((size > MAX_PKT_LENGTH) || (size <= 0))
@@ -286,9 +286,9 @@ int LoRaClass::sendPacketBlocking(const uint8_t *buffer, size_t size)
 	}
 
 	// put in standby mode
-	printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
+	//printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
 	writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_STDBY);
-	printf("MODE_LONG_RANGE_MODE | MODE_STDBY: %x REG_OP_MODE: %x\n", MODE_LONG_RANGE_MODE | MODE_STDBY, readRegister(REG_OP_MODE));
+	//printf("MODE_LONG_RANGE_MODE | MODE_STDBY: %x REG_OP_MODE: %x\n", MODE_LONG_RANGE_MODE | MODE_STDBY, readRegister(REG_OP_MODE));
 
 	// clear IRQ's
 	writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
@@ -301,27 +301,27 @@ int LoRaClass::sendPacketBlocking(const uint8_t *buffer, size_t size)
 	writeRegister(REG_FIFO_TX_BASE_ADDR, FIFO_TX_BASE_ADDR);
 
 	// Ecrit les données dans la fifo.
-	printf("Taille message: %d\n", size);
+	//printf("Taille message: %d\n", size);
 	for (size_t i = 0; i < size; i++)
 	{
 		writeRegister(REG_FIFO, buffer[i]);
-		printf("%c", buffer[i]);
+	//	printf("%c", buffer[i]);
 	}
-	printf("\n");
+	//printf("\n");
 	writeRegister(REG_PAYLOAD_LENGTH, size);
 
 	// Démarre l'émission.
-	printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
+	//printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
 	writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
-	printf("MODE_LONG_RANGE_MODE | MODE_TX: %x REG_OP_MODE: %x\n", MODE_LONG_RANGE_MODE | MODE_TX, readRegister(REG_OP_MODE));
+	//printf("MODE_LONG_RANGE_MODE | MODE_TX: %x REG_OP_MODE: %x\n", MODE_LONG_RANGE_MODE | MODE_TX, readRegister(REG_OP_MODE));
 
 	// Attend fin d'émission des données
 	while ((readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0)
 	{
-		printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
-		printf("Attend fin d'emission des donnees");
-		printf("irq=%x mask=%x\n", readRegister(REG_IRQ_FLAGS), IRQ_TX_DONE_MASK);
-		sleep_ms(1000);
+//		printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
+//		printf("Attend fin d'emission des donnees\n");
+//		printf("irq=%x mask=%x\n", readRegister(REG_IRQ_FLAGS), IRQ_TX_DONE_MASK);
+		sleep_ms(10);
 	}
 
 	// clear IRQ's
@@ -450,7 +450,7 @@ int LoRaClass::lora_event(uint8_t *receivedData)
 		uint8_t len;
 		uint8_t irq = readRegister(REG_IRQ_FLAGS);
 
-		if (!rx_done_flag)
+//		if (!rx_done_flag)
 		{
 			printf(" lora_event ???? rx_done_flag = %d\n", rx_done_flag);
 		}
@@ -686,20 +686,15 @@ void LoRaClass::rxContinuous()
 {
 	// put in standby mode
 	writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_STDBY);
-	printf(" rxContinuous00 %x\n", readRegister(REG_IRQ_FLAGS));
-	printf(" rxContinuous0 %x\n", readRegister(REG_IRQ_FLAGS) & IRQ_RX_DONE_MASK);
-	printf(" rxContinuous1 %x\n", readRegister(REG_IRQ_FLAGS) & IRQ_RX_DONE_MASK);
 
 	// clear IRQ's
 	writeRegister(REG_IRQ_FLAGS, readRegister(REG_IRQ_FLAGS));
-	printf(" rxContinuous2 %x\n", readRegister(REG_IRQ_FLAGS) & IRQ_RX_DONE_MASK);
 
-	/* Passe en mode explicit: un header est automatiquement ajout�/g�r� par Lora.*/
+	/* Passe en mode explicit: un header est automatiquement ajouté/géré par Lora.*/
 	writeRegister(REG_MODEM_CONFIG_1, readRegister(REG_MODEM_CONFIG_1) & 0xfe);
 
 	// Passe en mode Rx continuous
 	writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS);
-	printf(" rxContinuous3 %x\n", readRegister(REG_IRQ_FLAGS) & IRQ_RX_DONE_MASK);
 }
 
 void LoRaClass::setTxPower(int level, int outputPin)

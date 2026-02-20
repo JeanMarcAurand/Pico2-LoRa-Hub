@@ -101,6 +101,7 @@
 #define REG_FIFO_TX_BASE_ADDR    0x0e
 #define REG_FIFO_RX_BASE_ADDR    0x0f
 #define REG_FIFO_RX_CURRENT_ADDR 0x10
+#define REG_IRQ_FLAGS_MASK       0x11
 #define REG_IRQ_FLAGS            0x12
 #define REG_RX_NB_BYTES          0x13
 #define REG_PKT_SNR_VALUE        0x19

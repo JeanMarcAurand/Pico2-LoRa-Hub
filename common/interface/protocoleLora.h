@@ -2,26 +2,38 @@
 #ifndef PROTOCOL_LORA_H
 #define PROTOCOL_LORA_H
 
-#include <cstdint>
+#include <stdint.h>
+enum class LoRaNodeIdType : uint8_t
+{
+    HUB = 0,
+    SOLAR_MEASURE = 1,
 
-#pragma pack(push, 1)  // On force l'alignement strict
-
-/**
- * @brief Header de 3 octets (24 bits) optimisé pour LoRa
- * nodeID  : 6 bits (0-63)
- * msgType : 6 bits (0-63)
- * seqNo   : 6 bits (0-63)
- * length  : 6 bits (0-63 octets de payload)
- */
-struct LoraHeader {
-    uint32_t nodeId  : 6;
-    uint32_t msgType : 6;
-    uint32_t seqNo   : 6;
-    uint32_t length  : 6;
-    // Note : On utilise uint32_t car 24 bits ne rentrent pas dans un uint16_t, 
-    // mais le compilateur n'utilisera bien que 3 octets en mémoire.
+    TEST_DIALOG_LORA = 63
+    // On peut aller jusqu'à 63
 };
 
-#pragma pack(pop)
+enum class LoRaMsgType : uint8_t
+{
+    ACK = 0,
+    SOLAR_MEASURE = 1,
+
+    TEST_DIALOG_LORA = 63
+    // On peut aller jusqu'à 63
+};
+
+/**
+ * @brief Header LoRa compact de 4 octets (32 bits)
+ * L'attribut 'packed' garantit que la taille est exactement de 4 octets.
+ */
+struct __attribute__((packed)) LoRaHeader
+{
+    LoRaNodeIdType srcNodeID : 6; // 0-63
+    LoRaNodeIdType dstNodeID : 6; // 0-63
+    LoRaMsgType msgType : 6;      // Type de message
+    uint32_t seqNo : 6;           // Numéro de séquence
+    int32_t prevSNR : 6;          // SNR signé (-32 à +31 dB)
+    uint32_t reserved : 2;        // 2 bits de réserve (0-3)
+};
+
 
 #endif // PROTOCOL_LORA_H
