@@ -12,6 +12,8 @@
 #include "pico/util/datetime.h"
 #include "hardware/rcp.h"
 
+#include "pico/rand.h"
+
 // Instance de la classe LoRa
 LoRaClass LoRa;
 
@@ -29,8 +31,8 @@ LoRaClass LoRa;
 #define LORA_MODE LORA_HUB // Mode par défaut: récepteur
 #endif
 
-const uint LED_HUB_PIN = 4;
-const uint LED_NODE_PIN = 25;
+const uint LED_HUB_PIN = 4;   // pour pico W, cabler la led!
+const uint LED_NODE_PIN = 25; // pour pico sans W, led intédrée.
 
 // Variable globale ou statique pour savoir si l'alarme a sonné
 static volatile bool timeout_expired = false;
@@ -45,8 +47,102 @@ int64_t alarm_callback(alarm_id_t id, void *user_data)
 #include "hardware/powman.h"
 #include "hardware/rcp.h"
 #include "hardware/watchdog.h"
+#include <cmath>
 
-void powerDownAndReboot(uint32_t delay_s, bool debug)
+class PersistantParams
+{
+private:
+    enum class IndexOfPersistantsParams : uint32_t
+    {
+        NO_OCCURENCE = 0,
+        PREV_SNR = 1,
+        PREV_RSSI = 2,
+        TX_POWER = 3,
+        NB_MISSING_ACK = 4,
+        MAGIC_KEY = 5
+    };
+
+    static const uint32_t MAGIC_VALUE = 0xDEADBEEF;
+
+    // Helper interne pour le cast de l'index
+    static inline uint32_t idx(IndexOfPersistantsParams i)
+    {
+        return static_cast<uint32_t>(i);
+    }
+
+public:
+    static void init()
+    {
+        if (powman_hw->scratch[idx(IndexOfPersistantsParams::MAGIC_KEY)] != MAGIC_VALUE)
+        {
+            // Peu probable de trouver cette valeur à la mise sous tension.
+            // En revanche sera maintenu suite à un reboot.
+            setNoOccurrence(0);
+            setPrevSNR(-32);
+            setPrevRSSI(-200);
+            setTxPower(17); // Puissance max par défaut
+            setNbMissingAck(0);
+            powman_hw->scratch[idx(IndexOfPersistantsParams::MAGIC_KEY)] = MAGIC_VALUE;
+        }
+    }
+
+    // Gestion du SNR (signé int32_t)
+    static void setPrevSNR(int32_t snr)
+    {
+        powman_hw->scratch[idx(IndexOfPersistantsParams::PREV_SNR)] = static_cast<uint32_t>(snr);
+    }
+
+    static int32_t getPrevSNR()
+    {
+        return static_cast<int32_t>(powman_hw->scratch[idx(IndexOfPersistantsParams::PREV_SNR)]);
+    }
+
+    // Gestion du RSSI (signé int32_t)
+    static void setPrevRSSI(int32_t rssi)
+    {
+        powman_hw->scratch[idx(IndexOfPersistantsParams::PREV_RSSI)] = static_cast<uint32_t>(rssi);
+    }
+
+    static int32_t getPrevRSSI()
+    {
+        return static_cast<int32_t>(powman_hw->scratch[idx(IndexOfPersistantsParams::PREV_RSSI)]);
+    }
+
+    // Gestion de la Puissance (uint32_t)
+    static void setTxPower(uint32_t power)
+    {
+        powman_hw->scratch[idx(IndexOfPersistantsParams::TX_POWER)] = power;
+    }
+
+    static uint32_t getTxPower()
+    {
+        return powman_hw->scratch[idx(IndexOfPersistantsParams::TX_POWER)];
+    }
+
+    // Gestion du d'ack perdu (uint32_t)
+    static void setNbMissingAck(uint32_t nbMissingAck)
+    {
+        powman_hw->scratch[idx(IndexOfPersistantsParams::NB_MISSING_ACK)] = nbMissingAck;
+    }
+
+    static uint32_t getNbMissingAck()
+    {
+        return powman_hw->scratch[idx(IndexOfPersistantsParams::NB_MISSING_ACK)];
+    }
+
+    // Gestion du noOccurrence (uint32_t)
+    static void setNoOccurrence(uint32_t noOccurrence)
+    {
+        powman_hw->scratch[idx(IndexOfPersistantsParams::NO_OCCURENCE)] = noOccurrence;
+    }
+
+    static uint32_t getNoOccurrence()
+    {
+        return powman_hw->scratch[idx(IndexOfPersistantsParams::NO_OCCURENCE)];
+    }
+};
+
+void powerDownAndReboot_ms(uint32_t delay_ms, bool debug)
 {
     // Mise en sommeil de la radio.
     LoRa.sleep();
@@ -64,14 +160,14 @@ void powerDownAndReboot(uint32_t delay_s, bool debug)
             gpio_set_input_enabled(i, false);
         }
     }
+    printf("\n[powerDownAndReboot] Entrée en Power Down pour %d ms. Au revoir...\n", delay_ms);
     if (!debug)
     {
-        printf("\n[powerDownAndReboot] Entrée en Power Down pour %d s. Au revoir...\n", delay_s);
         stdio_flush();
 
         // On calcule l'échéance.
         uint64_t now = powman_timer_get_ms();
-        uint64_t alarm_time = now + (delay_s * 1000);
+        uint64_t alarm_time = now + delay_ms;
 
         // On arme le réveil.
         powman_enable_alarm_wakeup_at_ms(alarm_time);
@@ -93,7 +189,7 @@ void powerDownAndReboot(uint32_t delay_s, bool debug)
             printf(" Erreur powman_set_power_state = %d\n", status);
             stdio_flush();
         }
-        printf("[powerDownAndReboot] Power Down imminent. Réveil dans %u s\n", delay_s);
+        printf("[powerDownAndReboot] Power Down imminent. Réveil dans %u ms\n", delay_ms);
         stdio_flush();
 
         // On éteint le processeur.
@@ -107,9 +203,9 @@ void powerDownAndReboot(uint32_t delay_s, bool debug)
     {
         gpio_init(LED_NODE_PIN);
         gpio_set_dir(LED_NODE_PIN, GPIO_OUT);
-        for (int i = delay_s; i > 0; i--)
+        for (int i = delay_ms / 1000; i > 0; i--)
         {
-            printf("Rebbot dans %ds...\n", i);
+            printf("Rebbot dans %ds...  \r", i);
             for (int i = 5; i > 0; i--)
             {
                 gpio_put(LED_NODE_PIN, 1); // Allumer
@@ -175,7 +271,7 @@ AckStatus waitForAckLowPower(uint32_t timeout_ms, LoRaHeader &outAck, LoRaNodeId
                 returnValue = AckStatus::TIMEOUT;
             }
         }
-        printf("Sortie du wfi! \n");
+        //        printf("Sortie du wfi! \n");
     } while ((returnValue != AckStatus::OK) &&
              (returnValue != AckStatus::TIMEOUT));
 
@@ -203,50 +299,124 @@ AckStatus sendAck(LoRaHeader &outAck)
 
     return returnValue;
 }
+/*
+ * =========================================================================
+ * TABLE 13 : Gamme des Facteurs d'Étalement (Spreading Factors - SF) page 27
+ * =========================================================================
+ * SpreadingFactor | Facteur d'étalement  | SNR du démodulateur
+ *(RegModemConfig2)|   (Chips / symbole)  |      LoRa (dB)
+ * -------------------------------------------------------------------------
+ *        6        |          64          |       -5    dB
+ *        7        |         128          |       -7.5  dB
+ *        8        |         256          |      -10    dB
+ *        9        |         512          |      -12.5  dB
+ *       10        |        1024          |      -15    dB
+ *       11        |        2048          |      -17.5  dB
+ *       12        |        4096          |      -20    dB
+ * =========================================================================
+ * Note : Le SF6 est un cas particulier nécessitant un header implicite [1].
+ * Plus le SF est élevé, plus la sensibilité (portée) augmente au détriment
+ * du débit binaire [3].
+ */
+#define LIMITE_SNR_POUR_SF -7.5 // dB cas SF=7 (SPREADING_FACTOR) cf table ci-dessus
+#define MARGE_SNR 5             // dB.
 
-#if 0
-AckStatus waitForAck(uint32_t timeout_ms, LoRaHeader &outAck)
+/**
+ * ============================================================================
+ * SENSIBILITÉ BRUTE LoRa - CAS LOW FREQUENCY (LF : Bandes 2 & 3) [dBm]
+ * Source : SX1276/77/78/79 Datasheet - Table 10 (Electrical Specifications) page 20
+ * ============================================================================
+ * SF \ BW | 7.8 kHz | 10.4 kHz | 62.5 kHz | 125 kHz | 250 kHz | 500 kHz
+ * ----------------------------------------------------------------------------
+ *  SF6    |    --   |   -132   |   -123   |   -121  |   -118  |   -112
+ *  SF7    |    --   |   -136   |   -128   |   -125  |   -122  |   -118
+ *  SF8    |    --   |   -138   |   -131   |   -128  |   -125  |   -121
+ *  SF9    |    --   |    --    |   -134   |   -131  |   -128  |   -124
+ *  SF10   |    --   |    --    |   -135   |   -134  |   -131  |   -127
+ *  SF11   |   -145  |    --    |   -137   |   -136  |   -133  |   -129
+ *  SF12   |   -148  |    --    |   -140   |   -137  |   -134  |   -130
+ * ============================================================================
+ * Note : Les cases "--" indiquent des valeurs non spécifiées dans la table 10.
+ * La sensibilité augmente avec le Spreading Factor (SF) et diminue avec
+ * l'augmentation de la bande passante (BW).
+ */
+#define LIMITE_RSSI_POUR_SF_BW -125 // dB cas SF=7 (SPREADING_FACTOR) bande=125kHz (BANDWIDTH).
+#define MARGE_RSSI 10               // dB.
+
+/*
+ Si   SNR  < (LIMITE_SNR_POUR_SF+MARGE_SNR)
+   ou RSSI < (LIMITE_RSSI_POUR_SF_BW+MARGE_RSSI)
+alors puissance à la hausse
+sinon
+     si   SNR  > (LIMITE_SNR_POUR_SF+MARGE_SNR)
+       et RSSI > (LIMITE_RSSI_POUR_SF_BW+MARGE_RSSI)
+    alors puissance à la baisse
+*/
+int computeNextTxPower(int precedentSNR, int precedentRSSI, int currentTxPower)
 {
-    // Attente en économie d'énergie
-    AckStatus returnValue = AckStatus::ERREUR;
+    printf("[--------------------\n");
+    int nextTxPower; // entre 2 et 17 dBm.
+    int deltaSnr = precedentSNR - (LIMITE_SNR_POUR_SF + MARGE_SNR);
+    int deltaRssi = precedentRSSI - (LIMITE_RSSI_POUR_SF_BW + MARGE_RSSI);
+    printf(" precedentSNR = %d deltaSNR=%d\n", precedentSNR, deltaSnr);
+    printf(" precedentRSSI = %d deltaRssi=%d\n", precedentRSSI, deltaRssi);
+    printf(" currentTxPower = %d \n", currentTxPower);
 
-    if (returnValue == AckStatus::OK)
+    if ((deltaSnr < 0) || (deltaRssi < 0))
     {
-        // On a reçu quelque chose.
-        int res = LoRa.lora_event((uint8_t *)&outAck);
-
-        // On a reçu un message!
-        if (res > 0)
+        // On augmente la puissance.
+        if (deltaSnr < deltaRssi)
         {
-            if ((outAck.msgType == LoRaMsgType::ACK) &&
-                (outAck.dstNodeID == LoRaNodeIdType::TEST_DIALOG_LORA))
-            {
-                // On est bon si c'est bien un Ack qui nous est destiné.
-                returnValue = AckStatus::OK;
-            }
+            nextTxPower = ceil(currentTxPower - deltaSnr * 1.3);
         }
+        else
+        {
+            nextTxPower = ceil(currentTxPower - deltaRssi * 1.3);
+        }
+        printf(" On augmente la puissance nextTxPower= %d \n", nextTxPower);
     }
-    return returnValue;
+    else
+    {
+        // On diminue la puissance.
+        if (deltaSnr < deltaRssi)
+        {
+            nextTxPower = ceil(currentTxPower - deltaSnr * 0.5);
+        }
+        else
+        {
+            nextTxPower = ceil(currentTxPower - deltaRssi * 0.5);
+        }
+        printf(" On diminue la puissance nextTxPower= %d \n", nextTxPower);
+    }
+    nextTxPower = std::clamp(nextTxPower, 2, 17);
+    // Si l'ecart de correction est trop petit, ne fait rien.
+    if (abs(nextTxPower - currentTxPower) <= 2)
+    {
+        nextTxPower = currentTxPower;
+    }
+    printf("--------------------]\n");
+
+    return nextTxPower;
 }
-#endif
 
 // Fonction principale pour le mode node.
 //=======================================
 void runForNodeMode()
 {
+    // Init des paramètre pesrsistants.
+    PersistantParams persistantParams;
+    persistantParams.init();
 
-    // Configurer la puissance de transmission (17 dBm)
-    LoRa.setTxPower(17);
+    // Durée de sommeil.
+    const int recurrence_ms = 10000;
+    // Jitter de la recurrence en ms.
+    int jitter = 0;
 
     // Buffer pour le message/
     TestDialogLoraMsg message;
 
     // Buffer pour l'Ack
     LoRaHeader receivedAck;
-
-    // Compteur d'occurrence
-    uint32_t noOccurenceLocal = 0;
-    uint32_t precedentSNR = -32;
 
     /// init des champs fixes du Header.
     printf("Taille du message TestDialogLoraMsg=%d\n", sizeof(TestDialogLoraMsg));
@@ -263,22 +433,31 @@ void runForNodeMode()
 
         // Construire le message avec le numéro d'occurrence.
         //---------------------------------------------------
-        // récupère le no d'occurence dans la zone sauvegardée.
-        noOccurenceLocal = powman_hw->scratch[0];
-        // Mise à jour du message et incrémentation.
-        message.header.seqNo = noOccurenceLocal++;
-        // Sauvegarder immédiatement pour le prochain coup.
-        powman_hw->scratch[0] = noOccurenceLocal;
-        message.header.prevSNR = precedentSNR;
+        {
+            // récupère le no d'occurence dans la zone sauvegardée.
+            uint32_t noOccurenceLocal = persistantParams.getNoOccurrence();
+            // Mise à jour du message et incrémentation.
+            message.header.seqNo = noOccurenceLocal++;
+            // Sauvegarder immédiatement pour le prochain coup.
+            persistantParams.setNoOccurrence(noOccurenceLocal);
+        }
+        message.header.prevSNR = persistantParams.getPrevSNR();
+        message.header.prevRSSI = persistantParams.getPrevRSSI();
         message.solarCurrent = 111;
         message.batteryMv = 222;
         message.temperature = 33.3;
 
         // Envoyer le message.
         //--------------------
-        printf("Envoi du message: TestDialogLoraMsg\n");
+        printf("Envoi du message: TestDialogLoraMsg (%ddB)\n", persistantParams.getTxPower());
         gpio_put(LED_NODE_PIN, 1); // Allumer.
+
+        // Configurer la puissance de transmission.
+        LoRa.setTxPower(persistantParams.getTxPower());
+
+        // Envoie du message.
         int result = LoRa.sendPacketBlocking((const uint8_t *)&message, sizeof(TestDialogLoraMsg));
+
         // Passer en mode réception continue le plus vite possible pour ne pas anquer l'Ack.
         LoRa.rxContinuous();
         if (result > 0)
@@ -287,7 +466,8 @@ void runForNodeMode()
         }
         else
         {
-            printf("Erreur lors de l'envoi du message #%lu. Code d'erreur: %d\n", noOccurenceLocal, result);
+            printf("Erreur lors de l'envoi du message #%lu. Code d'erreur: %d\n",
+                   (persistantParams.getNoOccurrence() - 1), result);
         }
 
         // Attente de l'Ack.
@@ -299,21 +479,50 @@ void runForNodeMode()
         switch (status)
         {
         case AckStatus::OK:
-            printf("ACK reçu !\n");
-            printf(" RSSI: %d dBm SNR: %f \n", LoRa.packetRssi(), LoRa.packetSnr());
-            precedentSNR = std::clamp((int)receivedAck.prevSNR, -32, 31);
-            printf("precedentSNR  %ddB\n", precedentSNR);
+            printf("ACK reçu ! RSSI: %d dBm SNR: %fdB\n", LoRa.packetRssi(), LoRa.packetSnr());
+            // Correspond au SNR pour un message envoye par le Hub et mesuré sur le Node.
+            // Sera retourné au Hub pour ajuster sa puissance d'emission dans le cas de ce noeud.
+            persistantParams.setPrevSNR(std::clamp((int)LoRa.packetSnr(), -32, 31));
+            persistantParams.setPrevRSSI(std::clamp((int)LoRa.packetRssi(), -150, 10));
+            persistantParams.setTxPower(computeNextTxPower(receivedAck.prevSNR, receivedAck.prevRSSI, persistantParams.getTxPower()));
+            persistantParams.setNbMissingAck(0);
             break;
         case AckStatus::TIMEOUT:
+        {
             printf("Erreur : Timeout (Pas de réponse du Hub)\n");
-            break;
+            // On fait jitter la recurrence entre 0 et 10% recurence.
+            jitter = get_rand_32() % (recurrence_ms / 10);
+
+            uint32_t nombreAckPerdu = persistantParams.getNbMissingAck() + 1;
+            persistantParams.setNbMissingAck(nombreAckPerdu);
+            if (nombreAckPerdu == 1)
+            {
+                // On ne modifie pas la puissance.
+                // On fait jitter la recurrence entre 0 et 10% recurence.
+            }
+            else if (nombreAckPerdu == 2)
+            {
+                // On ne remonte la puissace que de 6dB et on fait jitter la recurrence.
+                persistantParams.setTxPower(std::clamp((int)(persistantParams.getTxPower() + 6), 2, 17));
+                // On fait jitter la recurrence entre 0 et 10% recurence.
+            }
+            else
+            {
+                // On a perdu la liason, repart en puissance max si la cause est que le Hub n'a pas reçu le message.
+                persistantParams.setTxPower(17);
+                // On fait jitter la recurrence entre 0 et 10% recurence.
+            }
+        }
+        break;
         default:
             printf("Erreur de réception : %d\n", (int)status);
+            // Réinit par précaution.
+            persistantParams.setTxPower(17);
             break;
         }
 
         // On s'endort pour 10s et on reboot.
-        powerDownAndReboot(10, true);
+        powerDownAndReboot_ms(recurrence_ms + jitter, true);
     }
 }
 
@@ -388,6 +597,7 @@ void runForHubMode()
             ackMsg.seqNo = ((LoRaHeader *)receivedData)->seqNo;
             ackMsg.msgType = LoRaMsgType::ACK;
             ackMsg.prevSNR = LoRa.packetSnr();
+            ackMsg.prevRSSI = LoRa.packetRssi();
 
             AckStatus status = sendAck(ackMsg);
             if (status == AckStatus::OK)
@@ -447,7 +657,7 @@ int main()
     // Petite pause pour te laisser le temps d'ouvrir le moniteur série
     for (int i = 10; i > 0; i--)
     {
-        printf("Demarrage dans %ds...\n", i);
+        printf("Demarrage dans %ds...  \r", i);
 
         gpio_put(LED_NODE_PIN, 1); // Allumer
         gpio_put(LED_HUB_PIN, 1);  // Allumer
@@ -456,13 +666,6 @@ int main()
         gpio_put(LED_NODE_PIN, 0); // Eteindre
         gpio_put(LED_HUB_PIN, 0);  // Eteindre
         sleep_ms(500);             // Attendre 500ms
-    }
-
-    // init de la pesrsistance du compteur d'occurence pour le node.
-    if (powman_hw->scratch[1] != 0xDEADBEEF) // Valeur improbable à la première utilisation du processeur.
-    {
-        powman_hw->scratch[0] = 0; // Initialisation premier démarrage
-        powman_hw->scratch[1] = 0xDEADBEEF;
     }
 
     // On dit au Power Manager d'utiliser l'oscillateur basse consommation.

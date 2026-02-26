@@ -22,8 +22,8 @@ enum class LoRaMsgType : uint8_t
 };
 
 /**
- * @brief Header LoRa compact de 4 octets (32 bits)
- * L'attribut 'packed' garantit que la taille est exactement de 4 octets.
+ * @brief Header LoRa compact de 5 octets (40 bits)
+ * L'attribut 'packed' garantit que la taille est exactement de 5 octets.
  */
 struct __attribute__((packed)) LoRaHeader
 {
@@ -32,8 +32,8 @@ struct __attribute__((packed)) LoRaHeader
     LoRaMsgType msgType : 6;      // Type de message
     uint32_t seqNo : 6;           // Numéro de séquence
     int32_t prevSNR : 6;          // SNR signé (-32 à +31 dB)
+    int32_t prevRSSI : 8;         // SNR signé (-150 à +10 dB)
     uint32_t reserved : 2;        // 2 bits de réserve (0-3)
 };
-
 
 #endif // PROTOCOL_LORA_H

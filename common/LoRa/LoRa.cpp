@@ -452,7 +452,7 @@ int LoRaClass::lora_event(uint8_t *receivedData)
 
 //		if (!rx_done_flag)
 		{
-			printf(" lora_event ???? rx_done_flag = %d\n", rx_done_flag);
+//			printf(" lora_event ???? rx_done_flag = %d\n", rx_done_flag);
 		}
 
 		// Clear irq status
