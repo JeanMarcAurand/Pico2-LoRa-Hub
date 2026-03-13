@@ -22,190 +22,272 @@
 /** @def LORA_DEFAULT_SPI_FREQUENCY
  * @brief Default SPI frequency in Hz (1 MHz)
  */
-#define LORA_DEFAULT_SPI_FREQUENCY (1000*1000)
+#define LORA_DEFAULT_SPI_FREQUENCY (1000 * 1000)
 
 /** @def LORA_DEFAULT_SS_PIN
  * @brief Default slave select (CS) GPIO pin (GPIO 17, pin 22)
  */
-#define LORA_DEFAULT_SS_PIN        17
+#define LORA_DEFAULT_SS_PIN 17
 
 /** @def LORA_DEFAULT_RESET_PIN
  * @brief Default reset GPIO pin (GPIO 7, pin 10)
  */
-#define LORA_DEFAULT_RESET_PIN     7
+#define LORA_DEFAULT_RESET_PIN 7
 
 /** @def LORA_DEFAULT_DO_INT_PIN
  * @brief Default interrupt GPIO pin (GPIO 6, pin 9)
  */
-#define LORA_DEFAULT_DO_INT_PIN    6
+#define LORA_DEFAULT_DO_INT_PIN 6
 
 /** @def CODING_RATE
  * @brief Default coding rate (4/5)
  */
-#define CODING_RATE			CODING_RATE_4_5
+#define CODING_RATE CODING_RATE_4_5
 
 /** @def BANDWIDTH
  * @brief Default bandwidth (125 kHz)
- * 
+ *
  * ATTENTION!! Si la durée d'un symbole dépasse 16 ms, il faut mettre Low Data Rate Optimization à 1.
  * cf p 114 et 132 datasheet LORA.
- * 
- * Cette durée se calcule avec la relation: 
- * durée d'un symbole = 2**SF / BW 
+ *
+ * Cette durée se calcule avec la relation:
+ * durée d'un symbole = 2**SF / BW
  * 	SF = SPREADING_FACTOR
  * 	BW = BANDWIDTH en Hz
- * 
+ *
  * Exemple SF=7, BW = 125kHz
  * 	durée d'un symbole = 1ms < 16ms, Low Data Rate Optimization=0 (valeur par defaut).
  */
-#define BANDWIDTH			BANDWIDTH_125_KHZ
+#define BANDWIDTH BANDWIDTH_125_KHZ
 /** @def SPREADING_FACTOR
  * @brief Default spreading factor (SF7)
- * 
+ *
  * ATTENTION!! Si la durée d'un symbole dépasse 16 ms, il faut mettre Low Data Rate Optimization à 1.
  * cf p 114 et 132 datasheet LORA.
- * 
- * Cette durée se calcule avec la relation: 
- * durée d'un symbole = 2**SF / BW 
+ *
+ * Cette durée se calcule avec la relation:
+ * durée d'un symbole = 2**SF / BW
  * 	SF = SPREADING_FACTOR
  * 	BW = BANDWIDTH en Hz
- * 
+ *
  * Exemple SF=7, BW = 125kHz
  * 	durée d'un symbole = 1ms < 16ms, Low Data Rate Optimization=0 (valeur par defaut).
  */
-#define SPREADING_FACTOR		SF7
-
+#define SPREADING_FACTOR SF7
 
 /** @def FREQUENCY
  * @brief Default operating frequency (433 MHz)
  */
-#define FREQUENCY			433E6
+#define FREQUENCY 433E6
 
 //==============================================
 
-#define PA_OUTPUT_RFO_PIN          0
-#define PA_OUTPUT_PA_BOOST_PIN     1
-
-
+#define PA_OUTPUT_RFO_PIN 0
+#define PA_OUTPUT_PA_BOOST_PIN 1
 
 // registers
-#define REG_FIFO                 0x00
-#define REG_OP_MODE              0x01
-#define REG_FRF_MSB              0x06
-#define REG_FRF_MID              0x07
-#define REG_FRF_LSB              0x08
-#define REG_PA_CONFIG            0x09
-#define REG_OCP                  0x0b
-#define REG_LNA                  0x0c
-#define REG_FIFO_ADDR_PTR        0x0d
-#define REG_FIFO_TX_BASE_ADDR    0x0e
-#define REG_FIFO_RX_BASE_ADDR    0x0f
+#define REG_FIFO 0x00
+#define REG_OP_MODE 0x01
+#define REG_FRF_MSB 0x06
+#define REG_FRF_MID 0x07
+#define REG_FRF_LSB 0x08
+#define REG_PA_CONFIG 0x09
+#define REG_OCP 0x0b
+#define REG_LNA 0x0c
+#define REG_FIFO_ADDR_PTR 0x0d
+#define REG_FIFO_TX_BASE_ADDR 0x0e
+#define REG_FIFO_RX_BASE_ADDR 0x0f
 #define REG_FIFO_RX_CURRENT_ADDR 0x10
-#define REG_IRQ_FLAGS_MASK       0x11
-#define REG_IRQ_FLAGS            0x12
-#define REG_RX_NB_BYTES          0x13
-#define REG_PKT_SNR_VALUE        0x19
-#define REG_PKT_RSSI_VALUE       0x1a
-#define REG_RSSI_VALUE           0x1b
-#define REG_MODEM_CONFIG_1       0x1d
-#define REG_MODEM_CONFIG_2       0x1e
-#define REG_PREAMBLE_MSB         0x20
-#define REG_PREAMBLE_LSB         0x21
-#define REG_PAYLOAD_LENGTH       0x22
-#define REG_MODEM_CONFIG_3       0x26
-#define REG_FREQ_ERROR_MSB       0x28
-#define REG_FREQ_ERROR_MID       0x29
-#define REG_FREQ_ERROR_LSB       0x2a
-#define REG_RSSI_WIDEBAND        0x2c
-#define REG_DETECTION_OPTIMIZE   0x31
-#define REG_INVERTIQ             0x33
-#define REG_DETECTION_THRESHOLD  0x37
-#define REG_SYNC_WORD            0x39
-#define REG_INVERTIQ2            0x3b
-#define REG_DIO_MAPPING_1        0x40
-#define REG_VERSION              0x42
-#define REG_PA_DAC               0x4d
+#define REG_IRQ_FLAGS_MASK 0x11
+#define REG_IRQ_FLAGS 0x12
+#define REG_RX_NB_BYTES 0x13
+#define REG_PKT_SNR_VALUE 0x19
+#define REG_PKT_RSSI_VALUE 0x1a
+#define REG_RSSI_VALUE 0x1b
+#define REG_MODEM_CONFIG_1 0x1d
+#define REG_MODEM_CONFIG_2 0x1e
+#define REG_PREAMBLE_MSB 0x20
+#define REG_PREAMBLE_LSB 0x21
+#define REG_PAYLOAD_LENGTH 0x22
+#define REG_MODEM_CONFIG_3 0x26
+#define REG_FREQ_ERROR_MSB 0x28
+#define REG_FREQ_ERROR_MID 0x29
+#define REG_FREQ_ERROR_LSB 0x2a
+#define REG_RSSI_WIDEBAND 0x2c
+#define REG_DETECTION_OPTIMIZE 0x31
+#define REG_INVERTIQ 0x33
+#define REG_DETECTION_THRESHOLD 0x37
+#define REG_SYNC_WORD 0x39
+#define REG_INVERTIQ2 0x3b
+#define REG_DIO_MAPPING_1 0x40
+#define REG_VERSION 0x42
+#define REG_PA_DAC 0x4d
 
 // modes
-#define MODE_LONG_RANGE_MODE     0x80
-#define MODE_SLEEP               0x00
-#define MODE_STDBY               0x01
-#define MODE_TX                  0x03
-#define MODE_RX_CONTINUOUS       0x05
-#define MODE_RX_SINGLE           0x06
+#define MODE_LONG_RANGE_MODE 0x80
+#define MODE_SLEEP 0x00
+#define MODE_STDBY 0x01
+#define MODE_TX 0x03
+#define MODE_RX_CONTINUOUS 0x05
+#define MODE_RX_SINGLE 0x06
 
 // PA config
-#define PA_BOOST                 0x80
+#define PA_BOOST 0x80
 
 // IRQ masks
-#define IRQ_TX_DONE_MASK           0x08
+#define IRQ_TX_DONE_MASK 0x08
 #define IRQ_PAYLOAD_CRC_ERROR_MASK 0x20
-#define IRQ_RX_DONE_MASK           0x40
-#define IRQ_RX_TIMEOUT_MASK		   0x80
+#define IRQ_RX_DONE_MASK 0x40
+#define IRQ_RX_TIMEOUT_MASK 0x80
 
-#define RF_MID_BAND_THRESHOLD    525E6
-#define RSSI_OFFSET_HF_PORT      157
-#define RSSI_OFFSET_LF_PORT      164
+#define RF_MID_BAND_THRESHOLD 525E6
+#define RSSI_OFFSET_HF_PORT 157
+#define RSSI_OFFSET_LF_PORT 164
 
-//Coding rate
-#define CODING_RATE_4_5			0b001
-#define CODING_RATE_4_6			0b010
-#define CODING_RATE_4_7			0b011
-#define CODING_RATE_4_8			0b100
+// Coding rate
+#define CODING_RATE_4_5 0b001
+#define CODING_RATE_4_6 0b010
+#define CODING_RATE_4_7 0b011
+#define CODING_RATE_4_8 0b100
 
-//Bandwidth
-#define BANDWIDTH_7_8_KHZ		0b0000
-#define BANDWIDTH_10_4_KHZ		0b0001
-#define BANDWIDTH_15_6_KHZ		0b0010
-#define BANDWIDTH_20_8_KHZ		0b0011
-#define BANDWIDTH_31_25_KHZ		0b0100
-#define BANDWIDTH_41_7_KHZ		0b0101
-#define BANDWIDTH_62_5_KHZ		0b0110
-#define BANDWIDTH_125_KHZ		0b0111
-#define BANDWIDTH_250_KHZ		0b1000
-#define BANDWIDTH_500_KHZ		0b1001
+// Bandwidth
+#define BANDWIDTH_7_8_KHZ 0b0000
+#define BANDWIDTH_10_4_KHZ 0b0001
+#define BANDWIDTH_15_6_KHZ 0b0010
+#define BANDWIDTH_20_8_KHZ 0b0011
+#define BANDWIDTH_31_25_KHZ 0b0100
+#define BANDWIDTH_41_7_KHZ 0b0101
+#define BANDWIDTH_62_5_KHZ 0b0110
+#define BANDWIDTH_125_KHZ 0b0111
+#define BANDWIDTH_250_KHZ 0b1000
+#define BANDWIDTH_500_KHZ 0b1001
+#define NUMBER_OF_BANDWIDTH (BANDWIDTH_500_KHZ + 1)
 
-//Spreading factor
-// #define SF6		6 Pas utilisable en mode explicit et config particuliere cf p27 
+// Spreading factor
+//  #define SF6		6 Pas utilisable en mode explicit et config particuliere cf p27
 /** @def SF7
  * @brief Spreading factor 7
  */
-#define SF7		7
+#define SF7 7
 /** @def SF8
  * @brief Spreading factor 8
  */
-#define SF8		8
+#define SF8 8
 /** @def SF9
  * @brief Spreading factor 9
  */
-#define SF9		9
+#define SF9 9
 /** @def SF10
  * @brief Spreading factor 10
  */
-#define SF10	10
+#define SF10 10
 /** @def SF11
  * @brief Spreading factor 11
  */
-#define SF11	11
+#define SF11 11
 /** @def SF12
  * @brief Spreading factor 12
  */
-#define SF12	12
+#define SF12 12
 
 /** @def MAX_PKT_LENGTH
  * @brief Maximum packet length (127 bytes)
  */
-#define MAX_PKT_LENGTH           127
+#define MAX_PKT_LENGTH 127
 /** @def FIFO_TX_BASE_ADDR
  * @brief TX FIFO base address
  */
-#define FIFO_TX_BASE_ADDR			 0x80
+#define FIFO_TX_BASE_ADDR 0x80
 /** @def FIFO_RX_BASE_ADDR
  * @brief RX FIFO base address
  */
-#define FIFO_RX_BASE_ADDR			 0x0
+#define FIFO_RX_BASE_ADDR 0x0
 
 #define ISR_PREFIX
+/*
+ * =========================================================================
+ * TABLE 13 : Gamme des Facteurs d'Étalement (Spreading Factors - SF) page 27
+ * =========================================================================
+ * SpreadingFactor | Facteur d'étalement  | SNR du démodulateur
+ *(RegModemConfig2)|   (Chips / symbole)  |      LoRa (dB)
+ * -------------------------------------------------------------------------
+ *        6        |          64          |       -5    dB
+ *        7        |         128          |       -7.5  dB
+ *        8        |         256          |      -10    dB
+ *        9        |         512          |      -12.5  dB
+ *       10        |        1024          |      -15    dB
+ *       11        |        2048          |      -17.5  dB
+ *       12        |        4096          |      -20    dB
+ * =========================================================================
+ * Note : Le SF6 est un cas particulier nécessitant un header implicite [1].
+ * Plus le SF est élevé, plus la sensibilité (portée) augmente au détriment
+ * du débit binaire [3].
+ */
+// Définition de la marge de SNR.
+#define MARGE_SNR 5. // dB.
+struct LoRaLimitSnrForSF
+{
+	uint8_t sf;
+	float minSnr;
+};
+
+// Tableau de correspondance SF -> SNR Limite
+static const LoRaLimitSnrForSF LORA_SF_LIMITS[] = {
+	{6, -5.0f},
+	{7, -7.5f},
+	{8, -10.0f},
+	{9, -12.5f},
+	{10, -15.0f},
+	{11, -17.5f},
+	{12, -20.0f}};
+
+/**
+ * ============================================================================================================
+ * SENSIBILITÉ LoRa LF (PORT 137-525 MHz) - RÉFÉRENCE COMPLÈTE [dBm]
+ * Sources : Datasheet SX1276/77/78/79 (Table 10) & Extrapolations Physiques
+ * ============================================================================================================
+ * Valeurs sans astérisque : Données constructeur certifiées (Semtech).
+ * Valeurs avec astérisque (*) : Extrapolations basées sur les règles de physique radio.
+ *
+ * SF \ BW | 7.8k  | 10.4k | 15.6k*| 20.8k*| 31.2k*| 41.7k*| 62.5k | 125k | 250k | 500k
+ * ------------------------------------------------------------------------------------------------------------
+ *  SF6    | -133* | -132  | -130* | -129* | -127* | -126* | -123  | -121 | -118 | -112
+ *  SF7    | -137* | -136  | -134* | -133* | -131* | -130* | -128  | -125 | -122 | -118
+ *  SF8    | -140* | -138  | -137* | -135* | -134* | -132* | -131  | -128 | -125 | -121
+ *  SF9    | -143* | -141* | -140* | -138* | -137* | -135* | -134  | -131 | -128 | -124
+ *  SF10   | -145* | -143* | -142* | -139* | -139* | -136* | -135  | -134 | -131 | -127
+ *  SF11   | -145  | -146* | -144* | -141* | -141* | -138* | -137  | -136 | -133 | -129
+ *  SF12   | -148  | -149* | -147* | -144* | -144* | -141* | -140  | -137 | -134 | -130
+ * ============================================================================================================
+ * CONDITIONS ET LOGIQUE D'EXTRAPOLATION :
+ * 1. Règle BW : Chaque division par 2 de la BW améliore la sensibilité de 3 dB (bruit thermique réduit) [1, 2].
+ * 2. Règle SF : Chaque incrément de SF améliore le SNR de démodulation de ~2.5 à 3 dB [1, 3].
+ * 3. Cohérence : Les valeurs extrapolées pour 20.8k et 41.7k respectent le pas rigoureux de 3dB/octave [3].
+ *
+ * CONTRAINTES CRITIQUES :
+ * - TCXO : Indispensable pour toute BW < 62.5 kHz pour garantir la stabilité de fréquence [3, 4].
+ * - Bande 169 MHz : Les BW 250 kHz et 500 kHz ne sont pas supportées sur cette bande [4].
+ * - Mode SF6 : Nécessite obligatoirement le mode "Implicit Header" [5].
+ * - Optimisation : Activer 'LowDataRateOptimize' si la durée d'un symbole (Ts = 2^SF / BW) > 16 ms [5].
+ * ============================================================================================================
+ */
+#define MARGE_RSSI 10 // dB.
+struct LoRaSensitivityRow
+{
+	uint8_t sf;
+	int16_t sensByBw[NUMBER_OF_BANDWIDTH];
+};
+static const LoRaSensitivityRow LORA_SENSITIVITY_TABLE[] = {
+	// SF| 7.8k| 10.4k| 15.6k| 20.8k| 31.2k| 41.7k| 62.5k| 125k | 250k | 500k
+	{6, {-133, -132, -130, -129, -127, -126, -123, -121, -118, -112}},
+	{7, {-137, -136, -134, -133, -131, -130, -128, -125, -122, -118}},
+	{8, {-140, -138, -137, -135, -134, -132, -131, -128, -125, -121}},
+	{9, {-143, -141, -140, -138, -137, -135, -134, -131, -128, -124}},
+	{10, {-145, -143, -142, -139, -139, -136, -135, -134, -131, -127}},
+	{11, {-145, -146, -144, -141, -141, -138, -137, -136, -133, -129}},
+	{12, {-148, -149, -147, -144, -144, -141, -140, -137, -134, -130}}};
+
+
 
 /**
  * @class LoRaClass
@@ -214,8 +296,9 @@
  * This class provides an interface for LoRa communication with SX1278 using
  * the Raspberry Pi Pico 2 hardware SPI interface.
  */
-class LoRaClass {
-	public:
+class LoRaClass
+{
+public:
 	/**
 	 * @brief Constructor for LoRaClass
 	 *
@@ -228,7 +311,7 @@ class LoRaClass {
 	 * @brief Initialize LoRa with specified frequency
 	 *
 	 * @param frequency The operating frequency in Hz (e.g., 433E6 for 433 MHz)
-	 * @return 1 on success, else version number 
+	 * @return 1 on success, else version number
 	 */
 	int begin(long frequency);
 
@@ -248,6 +331,32 @@ class LoRaClass {
 	 * Puts the LoRa module in sleep mode to conserve power.
 	 */
 	void end();
+
+	/**
+	 * Récupère le SNR limite pour un SF donné
+	 * en prenant compte de la marge MARGE_SNR.
+	 * Retourne -25.0f (valeur de sécurité) si le SF est hors plage
+	 */
+	int getMinSnrForSF(uint8_t sf);
+
+	/**
+	 * Retourne la sensibilité en dBm pour un couple SF/BW donné
+	 *  en prenant compte de la marge MARGE_RSSI.
+	 * Si le SF est hors plage, retourne celui de SF6, sensibilité min.
+	 * Si le BW est hors plage, retourne celui de 500k, sensibilité min.
+	 */
+	int getMinSensitivity(uint8_t sf, int bw);
+
+	/*
+	 Si   SNR  < (LIMITE_SNR_POUR_SF+MARGE_SNR)
+	   ou RSSI < (LIMITE_RSSI_POUR_SF_BW+MARGE_RSSI)
+	alors puissance à la hausse
+	sinon
+		 si   SNR  > (LIMITE_SNR_POUR_SF+MARGE_SNR)
+		   et RSSI > (LIMITE_RSSI_POUR_SF_BW+MARGE_RSSI)
+		alors puissance à la baisse
+	*/
+	int computeNextTxPower(int precedentSNR, int precedentRSSI, int currentTxPower);
 
 	/**
 	 * @brief Begin packet transmission
@@ -317,7 +426,7 @@ class LoRaClass {
 	 * @retval -2 CRC error
 	 * @retval -3 Packet too large
 	 */
-	int lora_event(uint8_t* receivedData);
+	int lora_event(uint8_t *receivedData);
 
 	/**
 	 * @brief Get RSSI of last received packet
@@ -467,7 +576,7 @@ class LoRaClass {
 	 * @param denominator Coding rate denominator (5-8)
 	 */
 	void setCodingRate4(int denominator);
-	
+
 	/**
 	 * @brief Set preamble length
 	 *
@@ -501,7 +610,7 @@ class LoRaClass {
 	 * @brief Disable IQ inversion
 	 */
 	void disableInvertIQ();
-	
+
 	/**
 	 * @brief Set over-current protection
 	 *
@@ -516,7 +625,6 @@ class LoRaClass {
 	 */
 	void setGain(uint8_t gain);
 
-
 	/**
 	 * @brief Dump all registers for debugging
 	 *
@@ -524,7 +632,7 @@ class LoRaClass {
 	 */
 	void dumpRegisters(void);
 
-	private:
+private:
 	/**
 	 * @brief Set explicit header mode
 	 */
@@ -566,7 +674,7 @@ class LoRaClass {
 	 */
 	void setLdoFlag();
 
-	public:
+public:
 	/**
 	 * @brief Read from LoRa register
 	 *
@@ -574,8 +682,8 @@ class LoRaClass {
 	 * @return Register value
 	 */
 	uint8_t readRegister(uint8_t address);
-	
-	private:
+
+private:
 	/**
 	 * @brief Write to LoRa register
 	 *
@@ -593,11 +701,10 @@ class LoRaClass {
 	 */
 	uint8_t singleTransfer(uint8_t address, uint8_t value);
 
-	private:
-	long _frequency; /**< Current operating frequency */
-	int _packetIndex; /**< Current packet index */
+private:
+	long _frequency;		 /**< Current operating frequency */
+	int _packetIndex;		 /**< Current packet index */
 	int _implicitHeaderMode; /**< Header mode flag */
 };
-
 
 #endif

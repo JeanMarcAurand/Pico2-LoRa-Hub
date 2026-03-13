@@ -1,6 +1,8 @@
 
 #include <LoRa.h>
 #include <stdio.h>
+#include <math.h>
+#include <algorithm>
 #include "hardware/gpio.h"
 #include <pico/time.h>
 
@@ -178,6 +180,95 @@ void LoRaClass::end()
 	sleep();
 }
 
+/**
+ * Récupère le SNR limite pour un SF donné
+ * en prenant compte de la marge MARGE_SNR.
+ * Retourne -25.0f (valeur de sécurité) si le SF est hors plage
+ */
+int LoRaClass::getMinSnrForSF(uint8_t sf)
+{
+	if (sf < 6 || sf > 12)
+		return (-25 + MARGE_SNR);
+	return (int)(ceil(LORA_SF_LIMITS[sf - 6].minSnr + MARGE_SNR));
+}
+
+/**
+ * Retourne la sensibilité en dBm pour un couple SF/BW donné
+ *  en prenant compte de la marge MARGE_RSSI.
+ * Si le SF est hors plage, retourne celui de SF6, sensibilité min.
+ * Si le BW est hors plage, retourne celui de 500k, sensibilité min.
+ */
+int LoRaClass::getMinSensitivity(uint8_t sf, int bw)
+{
+	if (sf < 6 || sf > 12)
+	{
+		sf = 6;
+	}
+	if (bw < 0 || bw >= NUMBER_OF_BANDWIDTH)
+	{
+		bw = BANDWIDTH_500_KHZ;
+	}
+	// Indexation directe : SF6 est à l'index 0
+	return (LORA_SENSITIVITY_TABLE[sf - 6].sensByBw[static_cast<uint8_t>(bw)] + MARGE_RSSI);
+}
+
+/*
+ Si   SNR  < (LIMITE_SNR_POUR_SF+MARGE_SNR)
+   ou RSSI < (LIMITE_RSSI_POUR_SF_BW+MARGE_RSSI)
+alors puissance à la hausse
+sinon
+	 si   SNR  > (LIMITE_SNR_POUR_SF+MARGE_SNR)
+	   et RSSI > (LIMITE_RSSI_POUR_SF_BW+MARGE_RSSI)
+	alors puissance à la baisse
+*/
+int LoRaClass::computeNextTxPower(int precedentSNR, int precedentRSSI, int currentTxPower)
+{
+	printf("[--------------------\n");
+	int nextTxPower; // entre 2 et 17 dBm.
+	int deltaSnr = precedentSNR - getMinSnrForSF(SPREADING_FACTOR);
+	int deltaRssi = precedentRSSI - getMinSensitivity(SPREADING_FACTOR, BANDWIDTH);
+	printf(" precedentSNR = %d deltaSNR=%d\n", precedentSNR, deltaSnr);
+	printf(" precedentRSSI = %d deltaRssi=%d\n", precedentRSSI, deltaRssi);
+	printf(" currentTxPower = %d \n", currentTxPower);
+
+	if ((deltaSnr < 0) || (deltaRssi < 0))
+	{
+		// On augmente la puissance.
+		if (deltaSnr < deltaRssi)
+		{
+			nextTxPower = ceil(currentTxPower - deltaSnr * 1.3);
+		}
+		else
+		{
+			nextTxPower = ceil(currentTxPower - deltaRssi * 1.3);
+		}
+		printf(" On augmente la puissance nextTxPower= %d \n", nextTxPower);
+	}
+	else
+	{
+		// On diminue la puissance.
+		if (deltaSnr < deltaRssi)
+		{
+			nextTxPower = ceil(currentTxPower - deltaSnr * 0.5);
+		}
+		else
+		{
+			nextTxPower = ceil(currentTxPower - deltaRssi * 0.5);
+		}
+		printf(" On diminue la puissance nextTxPower= %d \n", nextTxPower);
+	}
+	nextTxPower = std::clamp(nextTxPower, 2, 17);
+	// Si l'ecart de correction est trop petit, ne fait rien.
+	if (abs(nextTxPower - currentTxPower) <= 2)
+	{
+		nextTxPower = currentTxPower;
+	}
+	printf("--------------------]\n");
+
+	return nextTxPower;
+}
+
+
 int LoRaClass::beginPacket(int implicitHeader)
 {
 	printf("beginPacket.1\n");
@@ -276,8 +367,8 @@ int LoRaClass::sendPacketBlocking(const uint8_t *buffer, size_t size)
 		/* Transmission en cours.*/
 		return (-1);
 	}
-	//printf("pas d emission en cours: %x\n", readRegister(REG_OP_MODE) & MODE_TX);
-	//printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
+	// printf("pas d emission en cours: %x\n", readRegister(REG_OP_MODE) & MODE_TX);
+	// printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
 
 	// Vérifie la taille du message a envoyer.
 	if ((size > MAX_PKT_LENGTH) || (size <= 0))
@@ -286,9 +377,9 @@ int LoRaClass::sendPacketBlocking(const uint8_t *buffer, size_t size)
 	}
 
 	// put in standby mode
-	//printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
+	// printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
 	writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_STDBY);
-	//printf("MODE_LONG_RANGE_MODE | MODE_STDBY: %x REG_OP_MODE: %x\n", MODE_LONG_RANGE_MODE | MODE_STDBY, readRegister(REG_OP_MODE));
+	// printf("MODE_LONG_RANGE_MODE | MODE_STDBY: %x REG_OP_MODE: %x\n", MODE_LONG_RANGE_MODE | MODE_STDBY, readRegister(REG_OP_MODE));
 
 	// clear IRQ's
 	writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
@@ -301,26 +392,26 @@ int LoRaClass::sendPacketBlocking(const uint8_t *buffer, size_t size)
 	writeRegister(REG_FIFO_TX_BASE_ADDR, FIFO_TX_BASE_ADDR);
 
 	// Ecrit les données dans la fifo.
-	//printf("Taille message: %d\n", size);
+	// printf("Taille message: %d\n", size);
 	for (size_t i = 0; i < size; i++)
 	{
 		writeRegister(REG_FIFO, buffer[i]);
-	//	printf("%c", buffer[i]);
+		//	printf("%c", buffer[i]);
 	}
-	//printf("\n");
+	// printf("\n");
 	writeRegister(REG_PAYLOAD_LENGTH, size);
 
 	// Démarre l'émission.
-	//printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
+	// printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
 	writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
-	//printf("MODE_LONG_RANGE_MODE | MODE_TX: %x REG_OP_MODE: %x\n", MODE_LONG_RANGE_MODE | MODE_TX, readRegister(REG_OP_MODE));
+	// printf("MODE_LONG_RANGE_MODE | MODE_TX: %x REG_OP_MODE: %x\n", MODE_LONG_RANGE_MODE | MODE_TX, readRegister(REG_OP_MODE));
 
 	// Attend fin d'émission des données
 	while ((readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0)
 	{
-//		printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
-//		printf("Attend fin d'emission des donnees\n");
-//		printf("irq=%x mask=%x\n", readRegister(REG_IRQ_FLAGS), IRQ_TX_DONE_MASK);
+		//		printf("REG_OP_MODE: %x\n", readRegister(REG_OP_MODE));
+		//		printf("Attend fin d'emission des donnees\n");
+		//		printf("irq=%x mask=%x\n", readRegister(REG_IRQ_FLAGS), IRQ_TX_DONE_MASK);
 		sleep_ms(10);
 	}
 
@@ -444,15 +535,15 @@ int LoRaClass::lora_event(uint8_t *receivedData)
 	// 7. New mode request
 
 	int returnValue = -1;
-	
+
 	if ((readRegister(REG_IRQ_FLAGS) & IRQ_RX_DONE_MASK) != 0)
 	{
 		uint8_t len;
 		uint8_t irq = readRegister(REG_IRQ_FLAGS);
 
-//		if (!rx_done_flag)
+		//		if (!rx_done_flag)
 		{
-//			printf(" lora_event ???? rx_done_flag = %d\n", rx_done_flag);
+			//			printf(" lora_event ???? rx_done_flag = %d\n", rx_done_flag);
 		}
 
 		// Clear irq status

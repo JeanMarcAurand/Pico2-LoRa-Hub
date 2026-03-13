@@ -35,7 +35,9 @@ pico_sdk_init()
 
 # --- 1. LIB LoRa et Test ---
 add_subdirectory(common/LoRa)
-add_subdirectory(tests/LoRa)
+add_subdirectory(common/PersistantParams)
+add_subdirectory(common/LoRaLink)
+add_subdirectory(common/DeepSleep)
 add_subdirectory(tests/DialogLoRa)
 
 
