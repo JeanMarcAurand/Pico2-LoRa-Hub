@@ -23,7 +23,7 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico2 CACHE STRING "Board type")
+set(PICO_BOARD pico2_w CACHE STRING "Board type")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -39,6 +39,7 @@ add_subdirectory(common/PersistantParams)
 add_subdirectory(common/LoRaLink)
 add_subdirectory(common/DeepSleep)
 add_subdirectory(tests/DialogLoRa)
+add_subdirectory(tests/DialogMQTT)
 
 
 # --- 2. DÉFINITION DE L'EXÉCUTABLE  ---
