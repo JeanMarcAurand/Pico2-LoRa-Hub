@@ -47,6 +47,48 @@ static void mqtt_pub_request_cb(void *arg, err_t result)
     publish_in_progress = false;
 }
 
+// --- 1. Callback appelée quand un message arrive sur un topic abonné ---
+static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
+{
+    char message[128];
+    u16_t scan_len = (len < 127) ? len : 127;
+    memcpy(message, data, scan_len);
+    message[scan_len] = '\0'; // On s'assure que c'est une chaîne de caractères
+
+    printf("[mqtt_incoming_data_cb] Message reçu : %s\n", message);
+
+    // Exemple d'action simple :
+    if (strcmp(message, "ON") == 0)
+    {
+        printf("[mqtt_incoming_data_cb] On allume la LED !\n");
+        // cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+    }
+}
+
+// --- 2. Callback appelée quand on reçoit le contenu d'un topic ---
+// Note: lwIP sépare l'arrivée du NOM du topic et la DONNÉE.
+static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
+{
+    printf("[mqtt_incoming_publish_cb] Nouveau message sur le topic : %s (taille: %u)\n", topic, (unsigned int)tot_len);
+}
+
+// --- 3. Callback de confirmation d'abonnement ---
+static bool mqtt_sub_ready = false; // Flag de confirmation
+
+// La callback de confirmation
+static void mqtt_sub_request_cb(void *arg, err_t result)
+{
+    if (result == ERR_OK)
+    {
+        printf("[mqtt_sub_request_cb] Confirmation SUBACK reçue : Abonnement actif.\n");
+        mqtt_sub_ready = true; // On lève le drapeau
+    }
+    else
+    {
+        printf("[mqtt_sub_request_cb] Échec confirmation abonnement : %d\n", result);
+    }
+}
+
 enum class MqttStatus
 {
     OK,
@@ -117,7 +159,7 @@ MqttStatus mqtt_publishTimeOut(const char *topic, const void *msg_buffer, int ti
 {
     MqttStatus returnValue = MqttStatus::ERREUR;
 
-    // Vérifier si on est toujours connecté au niveau MQTT
+    // Vérifier si on est toujours connecté au niveau MQTT.
     if (!mqtt_is_connected || static_client == NULL)
     {
         printf("[mqtt_publishTimeOut] Erreur : Client non connecté.\n");
@@ -185,6 +227,57 @@ MqttStatus mqtt_publishTimeOut(const char *topic, const void *msg_buffer, int ti
         returnValue = MqttStatus::ERREUR;
     }
 
+    return (returnValue);
+}
+
+MqttStatus mqtt_subscribeTimeOut(const char *topic, int timeout_ms)
+{
+
+    MqttStatus returnValue = MqttStatus::ERREUR;
+    mqtt_sub_ready = false; // On reset avant de commencer
+
+    // 1. Configurer les callbacks de réception (Indispensable avant de s'abonner).
+    mqtt_set_inpub_callback(static_client, mqtt_incoming_publish_cb, mqtt_incoming_data_cb, NULL);
+
+    // 2. Envoyer la demande
+    cyw43_arch_lwip_begin();
+    err_t err = mqtt_sub_unsub(static_client, topic, 1, mqtt_sub_request_cb, NULL, 1);
+    cyw43_arch_lwip_end();
+
+    if (err != ERR_OK)
+    {
+        printf("[mqtt_subscribeTimeOut] Erreur immédiate lors de l'appel connect : %d\n", err);
+        returnValue = MqttStatus::ERREUR;
+    }
+    else
+    {
+        // 3. ATTENDRE la confirmation du Broker (SUBACK)
+        uint32_t start = to_ms_since_boot(get_absolute_time());
+        while (!mqtt_sub_ready)
+        {
+            cyw43_arch_poll(); // On traite les paquets entrants (le SUBACK arrive ici !)
+            sleep_ms(1);
+            if (to_ms_since_boot(get_absolute_time()) - start > timeout_ms)
+            {
+                printf("[mqtt_subscribeTimeOut] Timeout : La confirmation de l'abonnement par le Broker n'a pas été recu!\n");
+                break;
+            }
+        }
+        if (mqtt_sub_ready == true)
+        {
+            printf("[mqtt_subscribeTimeOut] Abonnement pour %s fait avec succès aprés %dms!\n",
+                   topic,
+                   (to_ms_since_boot(get_absolute_time()) - start));
+            returnValue = MqttStatus::OK;
+        }
+        else
+        {
+            printf("[mqtt_connectTimeOut] Pas de confimation de l'abonnement à %s aprés %dms !\n",
+                   topic,
+                   timeout_ms);
+            returnValue = MqttStatus::TIMEOUT;
+        }
+    }
     return (returnValue);
 }
 
@@ -273,6 +366,8 @@ int main()
 
         adc_init();
         adc_set_temp_sensor_enabled(true); // Active le capteur interne
+
+        mqtt_subscribeTimeOut("pico/cmd", 10000);
 
         while (true)
         {
