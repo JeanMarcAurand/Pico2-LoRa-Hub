@@ -38,6 +38,7 @@ add_subdirectory(common/LoRa)
 add_subdirectory(common/PersistantParams)
 add_subdirectory(common/LoRaLink)
 add_subdirectory(common/DeepSleep)
+add_subdirectory(common/MQTTLink)
 add_subdirectory(tests/DialogLoRa)
 add_subdirectory(tests/DialogMQTT)
 

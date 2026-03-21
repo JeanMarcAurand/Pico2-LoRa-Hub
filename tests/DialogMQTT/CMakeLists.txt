@@ -7,7 +7,8 @@ set(DIALOG_MQTT_TEST_LIBS
     pico_stdlib 
     pico_cyw43_arch_lwip_threadsafe_background
     hardware_adc
-    pico_lwip_mqtt)
+    pico_lwip_mqtt
+    mqttLink_common )
 
 
 # 3. Créer l'exécutable
