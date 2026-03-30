@@ -35,12 +35,14 @@ pico_sdk_init()
 
 # --- 1. LIB LoRa et Test ---
 add_subdirectory(common/LoRa)
+add_subdirectory(common/interface)
 add_subdirectory(common/PersistantParams)
 add_subdirectory(common/LoRaLink)
 add_subdirectory(common/DeepSleep)
 add_subdirectory(common/MQTTLink)
 add_subdirectory(tests/DialogLoRa)
 add_subdirectory(tests/DialogMQTT)
+add_subdirectory(tests/DialogCore)
 
 
 # --- 2. DÉFINITION DE L'EXÉCUTABLE  ---

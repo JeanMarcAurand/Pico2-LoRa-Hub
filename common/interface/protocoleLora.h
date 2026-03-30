@@ -7,7 +7,7 @@
 #ifndef PROTOCOL_LORA_H
 #define PROTOCOL_LORA_H
 
-#include <stdint.h>
+#include <cstdint>
 
 /**
  * @enum LoRaNodeIdType
@@ -15,10 +15,11 @@
  */
 enum class LoRaNodeIdType : uint8_t
 {
-    HUB = 0,            ///< Concentrateur central (Maître)
-    SOLAR_MEASURE,      ///< Nœud de mesure solaire
-    TEST_DIALOG_LORA,   ///< Nœud de test et diagnostic
-    NB_OF_NODEID        ///< Compteur pour l'itération et la taille des tableaux
+    HUB = 0,          ///< Concentrateur central (Maître)
+    SOLAR_MEASURE,    ///< Nœud de mesure solaire
+    CLOCK_TIMER,      ///< Données d'heure et d'alame.
+    TEST_DIALOG_LORA, ///< Nœud de test et diagnostic
+    NB_OF_NODEID      ///< Compteur pour l'itération et la taille des tableaux
 };
 
 /**
@@ -27,10 +28,11 @@ enum class LoRaNodeIdType : uint8_t
  */
 enum class LoRaMsgType : uint8_t
 {
-    ACK = 0,            ///< Accusé de réception (contient les métriques pour l'asservissement)
-    SOLAR_MEASURE,      ///< Données de télémétrie solaire
-    TEST_DIALOG_LORA,   ///< Message de test
-    NB_OF_MSG           ///< Nombre total de types de messages définis
+    ACK = 0,          ///< Accusé de réception (contient les métriques pour l'asservissement)
+    SOLAR_MEASURE,    ///< Données de télémétrie solaire
+    CLOCK_TIMER,      ///< Données d'heure et d'alame.
+    TEST_DIALOG_LORA, ///< Message de test
+    NB_OF_MSG         ///< Nombre total de types de messages définis
 };
 
 /**
@@ -45,18 +47,18 @@ struct __attribute__((packed)) LoRaHeader
     LoRaNodeIdType dstNodeID : 6; ///< ID du nœud destinataire (6 bits : 0-63)
     LoRaMsgType msgType : 6;      ///< Type de message (6 bits : 0-63)
     uint32_t seqNo : 6;           ///< Numéro de séquence pour détecter les pertes (6 bits : 0-63)
-    
+
     /** * @brief SNR de l'échange précédent mesuré par l'émetteur.
      * Valeur signée sur 6 bits permettant de coder de -32 à +31 dB.
      */
-    int32_t prevSNR : 6;          
-    
+    int32_t prevSNR : 6;
+
     /** * @brief RSSI de l'échange précédent mesuré par l'émetteur.
      * Valeur signée sur 8 bits pour coder -150 à +10 dB.
      */
-    int32_t prevRSSI : 9;         
-    
-uint32_t reserved : 1;        ///< 1 bit de réserve pour alignement sur 5 octets
+    int32_t prevRSSI : 9;
+
+    uint32_t reserved : 1; ///< 1 bit de réserve pour alignement sur 5 octets
 };
 
 #endif // PROTOCOL_LORA_H
