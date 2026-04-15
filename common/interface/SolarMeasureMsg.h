@@ -22,10 +22,15 @@ class SolarMeasureMsg : public BaseMessage
 {
 private:
     SolarData _solarData;
+    SolarMeasureMsg(/* args */);
 
 public:
-    SolarMeasureMsg(/* args */);
     ~SolarMeasureMsg();
+    static SolarMeasureMsg *getInstance()
+    {
+        static SolarMeasureMsg instance; // Créée une seule fois ici.
+        return &instance;
+    }
 
     // --- Interface pour MQTT ---
     const std::string getMqttTopic() const;
@@ -38,5 +43,10 @@ public:
 
     // --- Identification ---
     uint8_t getMessageTypeId() const;
+
+    // --- Affichage des valeurs ---
+    void printLoRaValues(void) const;
 };
+
+
 #endif

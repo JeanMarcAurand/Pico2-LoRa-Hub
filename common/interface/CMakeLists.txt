@@ -5,6 +5,7 @@ message("------- COUCOU : JE SUIS DANS common/interface/CMakeLists.txt ! -------
 add_library(interface_common_lib 
     SolarMeasureMsg.cpp
     ClockTimerMsg.cpp
+    HubFactory.cpp
 )
 
 # 2. On définit les chemins d'inclusion (Attention à la parenthèse !)

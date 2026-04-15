@@ -58,10 +58,30 @@ void ClockTimerMsg::updateWithMqtt(const char *json)
         _clockTimerData.mAlarme = alarm["m"] | 0;
         _clockTimerData.duree = alarm["duration"] | 0;
     }
-
 }
 // --- Identification ---
 uint8_t ClockTimerMsg::getMessageTypeId() const
 {
     return ((uint8_t)(LoRaMsgType::CLOCK_TIMER));
+}
+
+// --- Affichage des valeurs ---
+void ClockTimerMsg::printLoRaValues(void) const
+{
+    printf(">-- ClockTimerMsg id = %d ---\n", getMessageTypeId());
+    printLoraHeader(&(_clockTimerData.header));
+    printf("--- Data ---\n");
+    printf(" -- Bloc Heure Courante --\n");
+    printf("  heure: %d\n", _clockTimerData.heure);
+    printf("  minute: %d\n", _clockTimerData.minute);
+    printf("  seconde: %d\n", _clockTimerData.seconde);
+    printf(" --  Mode Alarme --\n");
+    printf("  alarmMode: %d\n", _clockTimerData.alarmMode);
+    printf(" -- Bloc Heure Alarme --\n");
+    printf("  hAlarme: %d\n", _clockTimerData.hAlarme);
+    printf("  mAlarme: %d\n", _clockTimerData.mAlarme);
+    printf("  sAlarme: %d\n", _clockTimerData.sAlarme);
+    printf(" --  Durée --\n");
+    printf("  duree: %d\n", _clockTimerData.duree);
+    printf("--- ClockTimerMsg --<\n");
 }

@@ -43,6 +43,7 @@ add_subdirectory(common/MQTTLink)
 add_subdirectory(tests/DialogLoRa)
 add_subdirectory(tests/DialogMQTT)
 add_subdirectory(tests/DialogCore)
+add_subdirectory(tests/DialogCoreLoRa)
 
 
 # --- 2. DÉFINITION DE L'EXÉCUTABLE  ---

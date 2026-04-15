@@ -29,6 +29,7 @@ public:
         OK,
         TIMEOUT,
         LOST_MESSAGE,
+        NO_MESSAGE,
         ERREUR
     };
 
@@ -44,6 +45,8 @@ public:
             _powerController = new NodePowerController(_loRa);
         }
     }
+    AckStatus noBlockReceive(uint8_t *inMessage,
+                             LoRaNodeIdType receiveNodeIdType);
 
     AckStatus waitForReceiveLowPower(uint8_t *inMessage,
                                      LoRaNodeIdType receiveNodeIdType);
@@ -59,12 +62,12 @@ public:
     AckStatus sendBlocking(LoRaHeader *outMessage,
                            size_t size);
 
-    AckStatus sendAck(LoRaHeader *outAck);
+    AckStatus sendAck(LoRaHeader *inMessage);
 
     AckStatus sendLoRaMessage(uint32_t ackTimeout_ms,
                               LoRaHeader *outLoRaMessage,
                               size_t size);
     AckStatus receiveLoRaMessage(uint8_t *inMessage,
-                             LoRaNodeIdType dstNodeIdType);
+                                 LoRaNodeIdType dstNodeIdType);
 };
 #endif

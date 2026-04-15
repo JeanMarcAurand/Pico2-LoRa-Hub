@@ -8,7 +8,7 @@
 #include <algorithm>
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
-#include "../../common/interface/testDialogLora.h"
+#include "SolarMeasureMsg.h"
 
 #include "pico/util/datetime.h"
 #include "hardware/rcp.h"
@@ -48,57 +48,59 @@ void runForNodeMode()
     bool whithJitter = false;
 
     // Buffer pour le message/
-    TestDialogLoraMsg message;
+    SolarData message;
 
     // Buffer pour l'Ack
     LoRaHeader receivedAck;
 
     /// init des champs fixes du Header.
-    printf("Taille du message TestDialogLoraMsg=%d\n", sizeof(TestDialogLoraMsg));
+    printf("Taille du message SolarData=%d\n", sizeof(SolarData));
 
-    message.header.srcNodeID = LoRaNodeIdType::TEST_DIALOG_LORA;
+    message.header.srcNodeID = LoRaNodeIdType::SOLAR_MEASURE;
     message.header.dstNodeID = LoRaNodeIdType::HUB;
-    message.header.msgType = LoRaMsgType::TEST_DIALOG_LORA;
+    message.header.msgType = LoRaMsgType::SOLAR_MEASURE;
 
     // Boucle principale
     while (true)
     {
+        int indice = 0;
+
         printf("Mode Node active\n");
 
         // Construire le message .
         //------------------------
-        message.solarCurrent = 111;
-        message.batteryMv = 222;
-        message.temperature = 33.3;
+        message.iSolar = indice++;
+        message.vBat = indice++;
+        message.tempRaw = indice++;
 
         // Envoyer le message.
         //--------------------
         LoRaLink::AckStatus returnValue = loRaLink->sendLoRaMessage(2000,
                                                                     (LoRaHeader *)&message,
-                                                                    sizeof(TestDialogLoraMsg));
+                                                                    sizeof(SolarData));
         switch (returnValue)
         {
         case LoRaLink::AckStatus::ERREUR:
             // Decale si eventuelles colisions.
             whithJitter = true;
-            printf("Envoi du message: TestDialogLoraMsg! ERREUR!\n");
+            printf("Envoi du message: SolarData! ERREUR!\n");
             break;
         case LoRaLink::AckStatus::LOST_MESSAGE:
             whithJitter = false;
-            printf("Envoi du message: TestDialogLoraMsg! LOST_MESSAGE!\n");
+            printf("Envoi du message: SolarData! LOST_MESSAGE!\n");
             break;
         case LoRaLink::AckStatus::OK:
             whithJitter = false;
-            printf("Envoi du message: TestDialogLoraMsg! OK!\n");
+            printf("Envoi du message: SolarData! OK!\n");
             break;
         case LoRaLink::AckStatus::TIMEOUT:
             // Decale si eventuelles colisions.
             whithJitter = true;
-            printf("Envoi du message: TestDialogLoraMsg! TIMEOUT!\n");
+            printf("Envoi du message: SolarData! TIMEOUT!\n");
             break;
         default:
             whithJitter = false;
-            printf("Envoi du message: TestDialogLoraMsg! default???\n");
+            printf("Envoi du message: SolarData! default???\n");
             break;
         }
         gpio_put(LED_NODE_PIN, 1); // Allumer.
@@ -115,7 +117,6 @@ void runForNodeMode()
 //======================================
 void runForHubMode()
 {
-
     printf("Mode HUB active\n");
 
     gpio_put(LED_HUB_PIN, 0); // Eteint la led.
@@ -164,14 +165,11 @@ void runForHubMode()
             {
             case LoRaMsgType::SOLAR_MEASURE:
                 printf(" Message SOLAR_MEASURE !\n ");
+                SolarMeasureMsg::getInstance()->updateWithLoRa(receivedData);
+                SolarMeasureMsg::getInstance()->printLoRaValues();
                 break;
             case LoRaMsgType::TEST_DIALOG_LORA:
                 printf(" Message TEST_DIALOG_LORA !\n ");
-                printf("NoOccurence:%d batteryMv:%d solarCurrent:%d, temperature:%f\n",
-                       ((TestDialogLoraMsg *)receivedData)->header.seqNo,
-                       ((TestDialogLoraMsg *)receivedData)->batteryMv,
-                       ((TestDialogLoraMsg *)receivedData)->solarCurrent,
-                       ((TestDialogLoraMsg *)receivedData)->temperature);
                 break;
             default:
                 printf(" Id de message inconnu = %d!\n ", ((LoRaHeader *)receivedData)->msgType);

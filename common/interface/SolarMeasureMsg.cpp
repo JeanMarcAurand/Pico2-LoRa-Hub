@@ -42,3 +42,15 @@ uint8_t SolarMeasureMsg::getMessageTypeId() const
 {
     return ((uint8_t)(LoRaMsgType::SOLAR_MEASURE));
 }
+
+// --- Affichage des valeurs ---
+void SolarMeasureMsg::printLoRaValues(void) const
+{
+    printf(">-- SolarMeasureMsg id = %d ---\n", getMessageTypeId());
+    printLoraHeader(&(_solarData.header));
+    printf("--- Data ---\n");
+    printf("  iSolar:  %d\n", _solarData.iSolar);
+    printf("  vBat:    %d\n", _solarData.vBat);
+    printf("  tempRaw: %d\n", _solarData.tempRaw);
+    printf("--- SolarMeasureMsg --<\n");
+}

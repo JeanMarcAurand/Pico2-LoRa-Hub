@@ -40,10 +40,15 @@ class ClockTimerMsg : public BaseMessage
 {
 private:
     ClockTimerData _clockTimerData;
+    ClockTimerMsg(/* args */);
 
 public:
-    ClockTimerMsg(/* args */);
     ~ClockTimerMsg();
+    static ClockTimerMsg *getInstance()
+    {
+        static ClockTimerMsg instance; // Créée une seule fois ici.
+        return &instance;
+    }
 
     // --- Interface pour MQTT ---
     const std::string getMqttTopic() const;
@@ -56,6 +61,9 @@ public:
 
     // --- Identification ---
     uint8_t getMessageTypeId() const;
+
+    // --- Affichage des valeurs ---
+    void printLoRaValues(void) const;
 };
 
 #endif

@@ -20,66 +20,85 @@ int64_t alarm_callback(alarm_id_t id, void *user_data)
     timeout_expired = true;
     return 0; // 0 signifie "ne pas répéter l'alarme"
 }
+
+LoRaLink::AckStatus LoRaLink::noBlockReceive(uint8_t *inMessage,
+                                             LoRaNodeIdType receiveNodeIdType)
+{
+    AckStatus returnValue = AckStatus::TIMEOUT;
+
+    // Regarde si on reçu quelque chose.
+    int res = _loRa->lora_event(inMessage);
+    if (res > 0)
+    {
+        LoRaHeader *loRaHeader = (LoRaHeader *)inMessage;
+
+        // C'est un message LoRa correct.
+        if (loRaHeader->dstNodeID == receiveNodeIdType)
+        {
+            // On est bon,c'est bien un message qui nous est destiné.
+            printf("Message recu de %d occurence %d! Carractéristique reception RSSI: %d dBm SNR: %fdB\n",
+                   loRaHeader->srcNodeID, loRaHeader->seqNo,
+                   _loRa->packetRssi(), _loRa->packetSnr());
+
+            // Met a jour les infos de puissance recu et calcul de la prochaine puissance d'émission.
+            _powerController->setActiveNode(loRaHeader->srcNodeID);
+            _powerController->setPrevSNR(std::clamp((int)_loRa->packetSnr(), -32, 31));
+            _powerController->setPrevRSSI(std::clamp((int)_loRa->packetRssi(), -150, 10));
+            _powerController->setTxPower(_loRa->computeNextTxPower(
+                _powerController->getPrevSNR(),
+                _powerController->getPrevRSSI(),
+                _powerController->getTxPower()));
+
+            // Verification du no d'occurence.
+            int noOcc = loRaHeader->seqNo;
+            if (_powerController->getNoOccurrence() == noOcc)
+            {
+                // C'est tout bon, on n'a pas perdu de messages.
+                returnValue = AckStatus::OK;
+            }
+            else
+            {
+                // Des messages ont été perdus.
+                returnValue = AckStatus::LOST_MESSAGE;
+            }
+            // remet à jour le prochain no d'occurence.
+            _powerController->setNoOccurrence(noOcc + 1);
+        }
+    }
+    else if (res == -1)
+    {
+        // Pas de message recu.
+        // printf("Pas de message recu.\n");
+        returnValue = AckStatus::NO_MESSAGE;
+    }
+    else if (res == -2)
+    {
+        // Erreur de CRC.
+        printf("Message recu avec erreur de CRC\n");
+        returnValue = AckStatus::ERREUR;
+    }
+    else if (res == -3)
+    {
+        // Message trop grand.
+        printf("Message trop grand pour le buffer\n");
+        returnValue = AckStatus::ERREUR;
+    }
+
+    return returnValue;
+}
 LoRaLink::AckStatus LoRaLink::waitForReceiveLowPower(uint8_t *inMessage,
                                                      LoRaNodeIdType receiveNodeIdType)
 {
     AckStatus returnValue = AckStatus::TIMEOUT;
     // Les it sont déjà initialisé dans LoRa pour la réception.
-    // On attend sans fin, si le timer n'a pas été initialisé avant ;-)
+    // On attend sans fin, si le timer n'a pas été initialisé avant ;-),
     do
     {
         // Dodo et economie d'énergie!
         __asm volatile("wfi");
 
         // Au réveil, on regarde si c'est le LoRa.
-        int res = _loRa->lora_event(inMessage);
-        if (res > 0)
-        {
-            LoRaHeader *loRaHeader = (LoRaHeader *)inMessage;
-
-            // C'est un message LoRa correct.
-            if (loRaHeader->dstNodeID == receiveNodeIdType)
-            {
-                // On est bon,c'est bien un message qui nous est destiné.
-                printf("Message recu de %d occurence %d! Carractéristique reception RSSI: %d dBm SNR: %fdB\n",
-                       loRaHeader->srcNodeID, loRaHeader->seqNo,
-                       _loRa->packetRssi(), _loRa->packetSnr());
-
-                // Met a jour les infos de puissance recu et calcul de la prochaine puissance d'émission.
-                _powerController->setActiveNode(loRaHeader->srcNodeID);
-                _powerController->setPrevSNR(std::clamp((int)_loRa->packetSnr(), -32, 31));
-                _powerController->setPrevRSSI(std::clamp((int)_loRa->packetRssi(), -150, 10));
-                _powerController->setTxPower(_loRa->computeNextTxPower(
-                    _powerController->getPrevSNR(),
-                    _powerController->getPrevRSSI(),
-                    _powerController->getTxPower()));
-
-                // Verification du no d'occurence.
-                int noOcc = loRaHeader->seqNo;
-                if (_powerController->getNoOccurrence() == noOcc)
-                {
-                    // C'est tout bon, on n'a pas perdu de messages.
-                    returnValue = AckStatus::OK;
-                }
-                else
-                {
-                    // Des messages ont été perdus.
-                    returnValue = AckStatus::LOST_MESSAGE;
-                }
-                // remet à jour le prochain no d'occurence.
-                _powerController->setNoOccurrence(noOcc + 1);
-            }
-        }
-        else if (res == -2)
-        {
-            // Erreur de CRC.
-            printf("Message recu avec erreur de CRC\n");
-        }
-        else if (res == -3)
-        {
-            // Message trop grand.
-            printf("Message trop grand pour le buffer\n");
-        }
+        returnValue = noBlockReceive(inMessage, receiveNodeIdType);
 
         //        printf("Sortie du wfi! \n");
     } while ((returnValue != AckStatus::OK) &&
@@ -121,10 +140,10 @@ LoRaLink::AckStatus LoRaLink::waitForReceiveLowPower(uint32_t timeout_ms,
                 ((loRaHeader->srcNodeID == srcNodeIdType)))
             {
                 // On est bon,c'est bien un message qui nous est destiné.
-                returnValue = AckStatus::OK;
                 // On annule l'alarme si on a reçu un message !
                 cancel_alarm(alarm_id);
             }
+            // sinon ce n'est pas un message qui nous concerne, on se remet en attente.
         }
         // On s'est réveillé sans avoir rien recu, c'est un time out.
         // Verifie si c'est le timer.
@@ -136,9 +155,9 @@ LoRaLink::AckStatus LoRaLink::waitForReceiveLowPower(uint32_t timeout_ms,
         }
         else
         {
-            // Curieux?
-            printf("Rien recu mais pas Timeout???? !\n");
-            returnValue = AckStatus::ERREUR;
+            // C'est une IT autre que la reception Lora ou le timer qui nous a reveillé.
+            printf("Rien recu, pas Timeout !\n");
+            returnValue = AckStatus::NO_MESSAGE;
         }
 
     } while ((returnValue != AckStatus::OK) &&
@@ -214,9 +233,9 @@ LoRaLink::AckStatus LoRaLink::waitForAckLowPower(uint32_t timeout_ms,
         }
         else
         {
-            // Curieux?
-            printf("Rien recu mais pas Timeout???? !\n");
-            returnValue = AckStatus::ERREUR;
+            // C'est une IT autre que la reception Lora ou le timer qui nous a reveillé.
+            // printf("Rien recu, pas Timeout !\n");
+            returnValue = AckStatus::NO_MESSAGE;
         }
     } while ((returnValue != AckStatus::OK) &&
              (returnValue != AckStatus::LOST_MESSAGE) &&
@@ -248,26 +267,37 @@ LoRaLink::AckStatus LoRaLink::sendBlocking(LoRaHeader *outMessage,
 
     // Envoie du message.
     int result = _loRa->sendPacketBlocking((uint8_t *)outMessage, size);
+    // Repasser en mode réception continue le plus vite possible.
+    _loRa->rxContinuous();
     if (result > 0)
     {
-        printf("Message  envoye avec succes. Taille: %d / %d bytes\n",
-               result, size);
+        // Et faire le moins de printf possible pour activer une réception rapidement.
+        // printf("Message  envoye avec succes. Taille: %d / %d bytes\n",
+        //        result, size);
         returnValue = AckStatus::OK;
     }
     else
     {
-        printf("Erreur lors de l'envoi du message. Code d'erreur: %d\n",
+        printf("Erreur lors de l'envoi du message id=%d. Code d'erreur: %d\n",
+               outMessage->msgType,
                result);
         returnValue = AckStatus::ERREUR;
     }
-    // Repasser en mode réception continue.
-    _loRa->rxContinuous();
 
     return returnValue;
 }
-LoRaLink::AckStatus LoRaLink::sendAck(LoRaHeader *outAck)
+LoRaLink::AckStatus LoRaLink::sendAck(LoRaHeader *inMessage)
 {
-    return sendBlocking(outAck, sizeof(LoRaHeader));
+    LoRaHeader ackMsg;
+    ackMsg.dstNodeID = ((LoRaHeader *)inMessage)->srcNodeID;
+    ackMsg.srcNodeID = ((LoRaHeader *)inMessage)->dstNodeID;
+    ackMsg.seqNo = ((LoRaHeader *)inMessage)->seqNo;
+    ackMsg.msgType = LoRaMsgType::ACK;
+
+    ackMsg.prevSNR = _loRa->packetSnr();
+    ackMsg.prevRSSI = _loRa->packetRssi();
+
+    return sendBlocking(&ackMsg, sizeof(LoRaHeader));
 }
 
 LoRaLink::AckStatus LoRaLink::sendLoRaMessage(uint32_t ackTimeout_ms,
@@ -291,7 +321,7 @@ LoRaLink::AckStatus LoRaLink::sendLoRaMessage(uint32_t ackTimeout_ms,
 }
 
 LoRaLink::AckStatus LoRaLink::receiveLoRaMessage(uint8_t *inMessage,
-                                             LoRaNodeIdType dstNodeIdType)
+                                                 LoRaNodeIdType dstNodeIdType)
 {
     AckStatus returnValue = AckStatus::ERREUR;
 
@@ -300,26 +330,11 @@ LoRaLink::AckStatus LoRaLink::receiveLoRaMessage(uint8_t *inMessage,
     if ((returnValue == AckStatus::OK) ||
         (returnValue == AckStatus::LOST_MESSAGE))
     {
+        // Pour laisser le temps au recepteur de se mettre en attente de l'Ack.
+        // Pas trop long car cela peut consommer de la pile ;-) 
+        sleep_ms(20);
         // On vient de recevoir un message, envoie de l'Ack.
-        LoRaHeader ackMsg;
-        LoRaNodeIdType srcNodeIdType = ((LoRaHeader *)inMessage)->srcNodeID;
-        ackMsg.dstNodeID = srcNodeIdType;
-        ackMsg.srcNodeID = dstNodeIdType;
-        ackMsg.seqNo = ((LoRaHeader *)inMessage)->seqNo;
-        ackMsg.msgType = LoRaMsgType::ACK;
-
-        ackMsg.prevSNR = _loRa->packetSnr();
-        ackMsg.prevRSSI = _loRa->packetRssi();
-
-        LoRaLink::AckStatus status = sendAck(&ackMsg);
-        if (status == LoRaLink::AckStatus::OK)
-        {
-            printf("Message Ack envoyé! \n");
-        }
-        else
-        {
-            printf("Pb d'envoie du message Ack! \n");
-        }
+        LoRaLink::AckStatus status = sendAck((LoRaHeader *)inMessage);
     }
     return (returnValue);
 }

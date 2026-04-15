@@ -105,7 +105,7 @@ void core1_entry()
         if (multicore_fifo_wready())
         {
             //
-            SolarMeasureMsg *msg = new SolarMeasureMsg();
+            SolarMeasureMsg *msg = SolarMeasureMsg::getInstance();
             msg->updateWithLoRa((const uint8_t *)message);
 
             // Protection de la queue
@@ -157,7 +157,7 @@ int main()
         if (multicore_fifo_wready())
         {
             //
-            ClockTimerMsg *msg = new ClockTimerMsg();
+            ClockTimerMsg *msg =  ClockTimerMsg::getInstance();
             msg->updateWithMqtt((const char *)message);
 
             // Protection de la queue
