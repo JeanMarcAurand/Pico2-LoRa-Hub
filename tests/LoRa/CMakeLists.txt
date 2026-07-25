@@ -1,6 +1,10 @@
+message("------- tests/LoRa/CMakeLists.txt ! -------")
+
 # --- Configuration commune ---
 set(LORA_TEST_SOURCES main.cpp)
-set(LORA_TEST_LIBS lora_common pico_stdlib)
+set(LORA_TEST_LIBS 
+    pico_stdlib
+    src_lib_lora )
 
 # --- 1. L'exécutable EMETTEUR ---
 add_executable(test_lora_send ${LORA_TEST_SOURCES})

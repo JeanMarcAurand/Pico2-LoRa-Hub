@@ -16,7 +16,7 @@
 #include "HubFactory.h"
 
 const uint LED_HUB_PIN = 4; // pour pico W, cabler la led!
-
+#if 0
 typedef struct MqttMessage4Fifo
 {
     char topic[64];
@@ -40,7 +40,7 @@ enum class coreCommand
     CORE0_SEND_LORA_MSG_TO_CORE1,
     CORE1_SEND_MQTT_MSG_TO_CORE0
 };
-
+#endif
 // Instance de la factory pour conversion des messages.
 HubFactory hubFactory;
 
@@ -67,8 +67,8 @@ void core1_entry()
     // On attache le handler
     irq_set_exclusive_handler(irq_num, handler_fifo_core1);
     // On active l'IRQ
-    irq_set_enabled(irq_num, true);
     msgReceivedFromMQTT = false; // On n'a rien recu.
+    irq_set_enabled(irq_num, true);
 
     printf("Initialisation du module LoRa...\n");
     // Initialiser le module LoRa
@@ -117,12 +117,8 @@ void core1_entry()
                 BaseMessage *msg = hubFactory.getInstanceMessage(((LoRaHeader *)receivedData)->msgType);
                 if (msg != nullptr)
                 {
+                    // Mise a jour du message.
                     msg->updateWithLoRa((const uint8_t *)receivedData);
-
-                    // Protection de la queue
-                    mutex_enter_blocking(&loraToMqttQueueMutex);
-                    loraToMqttQueue.push(msg);
-                    mutex_exit(&loraToMqttQueueMutex);
 
                     // On prévient le Core 0 par la FIFO
                     multicore_fifo_push_blocking(msg->getMessageTypeId());
@@ -202,7 +198,7 @@ int main()
 
     stdio_init_all();
 
-    // Petite pause pour te laisser le temps d'ouvrir le moniteur série
+    // Petite pause pour laisser le temps d'ouvrir le moniteur série.
     gpio_init(LED_HUB_PIN);
     gpio_set_dir(LED_HUB_PIN, GPIO_OUT);
     for (int i = 10; i > 0; i--)
@@ -248,37 +244,7 @@ int main()
 
     while (1)
     {
-#if 0
-        // Simulation de la reception d'un message MQTT et envoie à core 1.
-        // On simule que l'on vient de recevoir un message MQTT.
-        // On simule son contenu:
-        char message[128];
-        snprintf(message, 128, "{ \"current_time\": { \"h\": %d, \"m\": 30, \"s\": 0 }, \"alarm\": { \"mode\": 2, \"h\": 7, \"m\": 15,\"duration\": 60 }}",
-                 indice % 24);
-        indice++;
-        printf("[Core 0] Reception d'un message MQTT\n");
 
-        if (multicore_fifo_wready())
-        {
-            //
-            ClockTimerMsg *msg = new ClockTimerMsg();
-            msg->updateWithMqtt((const char *)message);
-
-            // Protection de la queue
-            mutex_enter_blocking(&mqttToLoraQueueMutex);
-            mqttToLoraQueue.push(msg);
-            mutex_exit(&mqttToLoraQueueMutex);
-
-            // On prévient le Core 0 par la FIFO
-            multicore_fifo_push_blocking(msg->getMessageTypeId());
-            printf("[Core 0] Message MQTT envoyé au Core 1\n");
-        }
-        else
-        {
-            // FIFO Pleine : On abandonne le message
-            printf("Erreur : FIFO core0->core1 pleine, message MQTT ignoré.\n");
-        }
-#endif
         // Reception d'un message en provenance de core 1.
         // On regarde si il y a un message du Core 1.
         if (multicore_fifo_rvalid())
@@ -286,53 +252,30 @@ int main()
             uint32_t msgFifoCore = multicore_fifo_pop_blocking();
             printf("[Core 0] J'ai reçu le code : %lu\n", msgFifoCore);
 
-            mutex_enter_blocking(&loraToMqttQueueMutex);
-            if (!loraToMqttQueue.empty())
-            {
-                BaseMessage *msg = loraToMqttQueue.front();
-                loraToMqttQueue.pop();
-                mutex_exit(&loraToMqttQueueMutex);
-                printf("[Core 0] J'ai reçu sur la fifo inter-core id=%lu\n", msg->getMessageTypeId());
+            BaseMessage *msg = hubFactory.getInstanceMessage((LoRaMsgType)msgFifoCore);
 
-                // verifie qu'il y a correspodance entre la fifo des core et la fifo de message.
-                if (msgFifoCore == msg->getMessageTypeId())
-                {
-                    if( msg->getMqttPublicationTopic()!=nullptr)
-                    {
-                    MqttStatus status = mqttLink.mqtt_publishTimeOut(msg->getMqttPublicationTopic(), msg->getMqttJson().c_str(), 10000);
-                    if (status == MqttStatus::OK)
-                    {
-                        printf(" [Core 0] MqttStatus::OK message MQTT envoyé: topic: %s Json:%s\n",
-                               msg->getMqttPublicationTopic(),
-                               msg->getMqttJson().c_str());
-                    }
-                    else if (status == MqttStatus::TIMEOUT)
-                    {
-                        printf(" [Core 0] MqttStatus::TIMEOUT message MQTT: topic: %s Json:%s\n",
-                               msg->getMqttPublicationTopic(),
-                               msg->getMqttJson().c_str());
-                    }
-                    else if (status == MqttStatus::ERREUR)
-                    {
-                        printf(" [Core 0] MqttStatus::ERREUR message MQTT: topic: %s Json:%s\n",
-                               msg->getMqttPublicationTopic(),
-                               msg->getMqttJson().c_str());
-                    }
-                }
-                }
-                else
-                {
-                    printf(" [Core 0] Décalage entre fifo des core id=%d et fifo message id = %d\n",
-                           msgFifoCore, msg->getMessageTypeId());
-                }
-            }
-            else
+            MqttStatus status = mqttLink.mqtt_publishTimeOut(msg->getMqttPublicationTopic(), msg->getMqttJson().c_str(), 10000);
+            if (status == MqttStatus::OK)
             {
-                mutex_exit(&loraToMqttQueueMutex);
+                printf(" [Core 0] MqttStatus::OK message MQTT envoyé: topic: %s Json:%s\n",
+                       msg->getMqttPublicationTopic(),
+                       msg->getMqttJson().c_str());
+            }
+            else if (status == MqttStatus::TIMEOUT)
+            {
+                printf(" [Core 0] MqttStatus::TIMEOUT message MQTT: topic: %s Json:%s\n",
+                       msg->getMqttPublicationTopic(),
+                       msg->getMqttJson().c_str());
+            }
+            else if (status == MqttStatus::ERREUR)
+            {
+                printf(" [Core 0] MqttStatus::ERREUR message MQTT: topic: %s Json:%s\n",
+                       msg->getMqttPublicationTopic(),
+                       msg->getMqttJson().c_str());
             }
         }
-        // Petite pause de courtoisie pour laisser le bus souffler
-        // (quelques microsecondes, imperceptible pour l'utilisateur)
-        tight_loop_contents();
     }
+    // Petite pause de courtoisie pour laisser le bus souffler
+    // (quelques microsecondes, imperceptible pour l'utilisateur)
+    tight_loop_contents();
 }

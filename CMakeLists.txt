@@ -33,22 +33,15 @@ project(Projet C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# --- 1. LIB LoRa et Test ---
-add_subdirectory(common/LoRa)
-add_subdirectory(common/interface)
-add_subdirectory(common/PersistantParams)
-add_subdirectory(common/LoRaLink)
-add_subdirectory(common/DeepSleep)
-add_subdirectory(common/MQTTLink)
-add_subdirectory(tests/DialogLoRa)
-add_subdirectory(tests/DialogMQTT)
-add_subdirectory(tests/DialogCore)
-add_subdirectory(tests/DialogCoreLoRa)
+# On lance la cascade vers les sources et les tests
+add_subdirectory(src)
+add_subdirectory(tests)
+
 
 
 # --- 2. DÉFINITION DE L'EXÉCUTABLE  ---
 add_executable(Projet main.cpp)
-target_link_libraries(Projet PRIVATE lora_common pico_stdlib)
+target_link_libraries(Projet PRIVATE src_lib_lora pico_stdlib)
 
 # --- 3. OPTIONS PICO  ---
 pico_set_program_name(Projet "Projet")

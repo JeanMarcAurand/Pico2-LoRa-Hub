@@ -1,10 +1,14 @@
+message("------- tests/DialogLoRa/CMakeLists.txt ! -------")
+
 # --- Configuration commune ---
 set(DIALOG_LORA_TEST_SOURCES main.cpp)
 set(DIALOG_LORA_TEST_LIBS 
     pico_stdlib pico_rand 
     hardware_rcp hardware_powman hardware_timer 
-    lora_common loraLink_common interface_common_lib
-    persistantParams_common powerDownAndReboot_common)
+    src_lib_messages
+    src_lib_lora src_lib_loraLink 
+    src_lib_persistantParams
+    src_lib_powerDownAndReboot)
     
 # --- 1. L'exécutable NOEUD ---
 add_executable(test_dialogLora_node ${DIALOG_LORA_TEST_SOURCES})

@@ -61,9 +61,9 @@ void core1_entry()
                     switch (msg->getMessageTypeId())
                     {
                     case (uint8_t)LoRaMsgType::CLOCK_TIMER:
-                        printf(" [Core 1] heure %d minute %d \n",
+ /*                      printf(" [Core 1] heure %d minute %d \n",
                                ((ClockTimerData *)(msg->getLoRaPayload()))->heure,
-                               ((ClockTimerData *)(msg->getLoRaPayload()))->minute);
+                               ((ClockTimerData *)(msg->getLoRaPayload()))->minute);*/
                         // Action ! Envoie le message sur LoRa.
                         printf("[Core 1] Envoie message LoRa\n");
                         break;
@@ -202,7 +202,7 @@ int main()
                         // Action ! (Polymorphisme : appelle le bon topic et le bon JSON)
                         // mqttClient.publish(msg->getMqttTopic(), msg->getMqttJson());
                         printf(" [Core 0] Envoie message MQTT: topic: %s Json:%s\n",
-                               msg->getMqttTopic().c_str(),
+                               msg->getMqttPublicationTopic(),
                                msg->getMqttJson().c_str());
                         break;
 

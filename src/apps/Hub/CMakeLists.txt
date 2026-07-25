@@ -1,8 +1,8 @@
-message("------- tests/DialogCoreLoRa/CMakeLists.txt ! -------")
+message("------- src/apps/hub/CMakeLists.txt ! -------")
 
 # Configuration des sources et libs
-set(DIALOG_CORE_LORA_TEST_SOURCES main.cpp)
-set(DIALOG_CORE_LORA_TEST_LIBS    pico_stdlib 
+set(src_apps_hub_SOURCES main.cpp)
+set(src_apps_hub_LIBS    pico_stdlib 
     pico_multicore 
     hardware_irq
     hardware_gpio
@@ -17,23 +17,24 @@ set(DIALOG_CORE_LORA_TEST_LIBS    pico_stdlib
     src_lib_powerDownAndReboot
     # 3. On met les messages en dernier, car TOUT LE MONDE pioche dedans
     src_lib_messages
-)
+    )
 
 
 # Créer l'exécutable 
-add_executable(test_dialogCoreLoRa ${DIALOG_CORE_LORA_TEST_SOURCES})
+add_executable(src_apps_hub ${src_apps_hub_SOURCES})
 
-# target_include_directories(test_dialogCoreLoRa PRIVATE 
+# target_include_directories(src_apps_hub PRIVATE 
 #     ${CMAKE_CURRENT_SOURCE_DIR}
-#     ${CMAKE_SOURCE_DIR}/src/libs/messages  # Utilise le chemin relatif propre
-#  )
+#     ${CMAKE_SOURCE_DIR}/src/libs/messages 
+# )
 
 # 4. Activer l'USB (pour printf)
-pico_enable_stdio_usb(test_dialogCoreLoRa 1)
-pico_enable_stdio_uart(test_dialogCoreLoRa 0)
+pico_enable_stdio_usb(src_apps_hub 1)
+pico_enable_stdio_uart(src_apps_hub 0)
 
 # 5. Lier les bibliothèques
-target_link_libraries(test_dialogCoreLoRa ${DIALOG_CORE_LORA_TEST_LIBS})
+target_link_libraries(src_apps_hub ${src_apps_hub_LIBS})
 
 # 6. Générer le fichier .uf2
-pico_add_extra_outputs(test_dialogCoreLoRa)
+pico_add_extra_outputs(src_apps_hub)
+

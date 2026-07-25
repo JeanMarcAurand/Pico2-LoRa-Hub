@@ -1,3 +1,5 @@
+message("------- tests/DialogMQTT/CMakeLists.txt ! -------")
+
 # 1. Définir la carte AVANT tout le reste
 set(PICO_BOARD pico2_w)
 
@@ -8,7 +10,7 @@ set(DIALOG_MQTT_TEST_LIBS
     pico_cyw43_arch_lwip_threadsafe_background
     hardware_adc
     pico_lwip_mqtt
-    mqttLink_common )
+    src_lib_mqttLink )
 
 
 # 3. Créer l'exécutable

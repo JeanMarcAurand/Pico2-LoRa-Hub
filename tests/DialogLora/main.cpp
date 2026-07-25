@@ -17,6 +17,9 @@
 LoRaClass loRa;
 LoRaLink *loRaLink;
 
+// Pour poxer down
+PowerDownAndReboot powerDownAndReboot;
+
 // Définir le mode: DIALOG_LORA_MODE_NODE ou DIALOG_LORA_MODE_HUB
 // Compilez avec -DDIALOG_LORA_MODE_NODE pour simuler un noeud ( capteur...)
 // Compilez avec -DDIALOG_LORA_MODE_HUB  pour le hub ( reception mesure et converion MQTT par exemple) ou rien par defaut
@@ -109,7 +112,7 @@ void runForNodeMode()
         loRa.sleep();
 
         // On s'endort pour 10s et on reboot.
-        powerDownAndReboot_ms(recurrence_ms, whithJitter, true);
+        powerDownAndReboot.powerDownAndReboot_ms(recurrence_ms, whithJitter, true);
     }
 }
 
